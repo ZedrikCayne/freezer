@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barcode Scanner</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #video {
+            width: 100%;
+            max-width: 500px;
+            border: 1px solid #ccc;
+            margin-top: 20px;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        input {
+            padding: 10px;
+            font-size: 16px;
+            width: 250px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <button id="scanBtn">Start Barcode Scan</button>
+    </div>
+
+    <input type="text" id="barcodeResult" placeholder="Barcode value will appear here" readonly>
+    <p id="supportedFormats" style="font-size: 12px; color: #666; text-align: center; margin-top: 10px;"></p>
+
+    <video id="video" autoplay playsinline></video>
+
+    <script>
+        const scanBtn = document.getElementById('scanBtn');
+        const video = document.getElementById('video');
+        const barcodeResultActual = document.getElementById('barcodeResult');
+        const supportedFormatsText = document.getElementById('supportedFormats');
+
+        // Show supported formats on load
+        if ('BarcodeDetector' in window) {
+            BarcodeDetector.getSupportedFormats().then(formats => {
+                supportedFormatsText.textContent = "Supported formats: " + formats.join(', ');
+            });
+        } else {
+            supportedFormatsText.textContent = "Barcode Detector API not supported in this browser.";
+        }
+
+        async function startScanner() {
+            scanBtn.disabled = true;
+            video.style.display = 'block';
+            let stream;
+            try {
+
+                // Request camera access
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
+                });
+                video.srcObject = stream;
+
+                // Initialize BarcodeDetector with all supported formats
+                const detector = new BarcodeDetector();
+
+                // Function to continuously detect barcodes
+                async function detectBarcodes() {
+                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                        const barcodes = await detector.detect(video);
+                        if (barcodes.length > 0) {
+                            barcodeResultActual.value = barcodes[0].rawValue;
+                            
+                            // Stop the camera tracks after successful scan
+                            stream.getTracks().forEach(track => track.stop());
+                            video.style.display = 'none';
+                            scanBtn.disabled = false;
+                            return; // Exit the loop
+                        }
+                    }
+                    requestAnimationFrame(detectBarcodes);
+                }
+
+                // Start detection loop once video starts playing
+                video.onplay = () => {
+                    detectBarcodes();
+                };
+
+            } catch (err) {
+                console.error("Error: ", err);
+                alert("Error accessing camera or Barcode Detector API not supported: " + err.message);
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+                video.style.display = 'none';
+                scanBtn.disabled = false;
+            }
+        }
+
+        scanBtn.addEventListener('click', startScanner);
+    </script>
+</body>
+</html>
