@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Barcode Scanner & Image Cropper</title>
+    <title>What's in my Pantry?</title>
     <style>
         body {
+            background-color: #252525;
+            text-color: white;
             font-family: sans-serif;
             display: flex;
             flex-direction: column;
@@ -16,22 +18,33 @@
             padding: 20px;
         }
         #video {
+            position: absolute;
             width: 100%;
-            max-width: 500px;
-            border: 1px solid #ccc;
-            margin-top: 20px;
+            height: 100%;
+            border: none;
+            touch-action: none;
         }
         #cropCanvas {
             width: 100%;
+            height: 100%;
+            border: none;
+            display: none;
+            cursor: crosshair;
+            touch-action: none;
+        }
+        #dbg {
+            width: 100%;
             max-width: 500px;
             border: 1px solid #ccc;
             margin-top: 20px;
-            display: none;
-            cursor: crosshair;
+            touch-action: none;
         }
         .controls {
             margin-bottom: 20px;
             text-align: center;
+        }
+        .ui-overlay {
+            z-index: 1;
         }
         .controls button {
             margin: 5px;
@@ -43,6 +56,8 @@
             margin-bottom: 10px;
         }
         button {
+            background-color: #909090;
+            color: white;
             padding: 10px 20px;
             font-size: 16px;
             cursor: pointer;
@@ -54,25 +69,24 @@
     <div class="controls">
         <button id="scanBtn">Start Barcode Scan</button>
         <button id="captureBtn">Start Camera for Picture</button>
-        <button id="captureFrameBtn" style="display:none;">Capture Frame</button>
-        <button id="cropBtn" style="display:none;">Crop & Save</button>
     </div>
 
     <input type="text" id="barcodeResult" placeholder="Barcode value will appear here" readonly>
-    <p id="supportedFormats" style="font-int-size: 12px; color: #666; text-align: center; margin-top: 10px;"></p>
 
+    <button id="captureFrameBtn" class="ui-overlay" style="position:absolute;top:80%;left:45%;right:55%;bottom:90%;display:none;">Capture Frame</button>
+    <button id="cropBtn" class="ui-overlay" style="position:absolute;top:80%;left:45%;right:55%;bottom:90%;display:none;">Crop &amp; Save</button>
     <video id="video" autoplay playsinline></video>
     <canvas id="cropCanvas"></canvas>
 
     <script>
+        var pantry = {};
+        const dbg = document.getElementById('dbg');
         const scanBtn = document.getElementById('scanBtn');
         const captureBtn = document.getElementById('captureBtn');
         const captureFrameBtn = document.getElementById('captureFrameBtn');
         const cropBtn = document.getElementById('cropBtn');
         const video = document.getElementById('video');
         const cropCanvas = document.getElementById('cropCanvas');
-        const barcodeResultActual = document.getElementById('barcodeResult');
-        const supportedFormatsText = document.getElementById('supportedFormats');
         const ctx = cropCanvas.getContext('2d');
 
         const offscreenCanvas = document.createElement('canvas');
@@ -83,15 +97,7 @@
         let startX, startY;
         let selection = { x: 0, y: 0, w: 0, h: 0 };
 
-        if ('BarcodeDetector' in window) {
-            BarcodeDetector.getSupportedFormats().then(formats => {
-                supportedFormatsText.textContent = "Supported formats: " + formats.join(', ');
-            }).catch(err => {
-                supportedFormatsText.textContent = "Error loading formats: " + err.message;
-            });
-        } else {
-            supportedFormatsText.textContent = "Barcode Detector API not supported in this browser.";
-        }
+        resetUI();
 
         function resetUI() {
             video.style.display = 'none';
@@ -127,9 +133,11 @@
                     if (video.readyState === video.HAVE_ENOUGH_DATA) {
                         const barcodes = await detector.detect(video);
                         if (barcodes.length > 0) {
+                            /*
                             barcodeResultActual.value = barcodes[0].rawValue;
                             stopCamera();
                             resetButtons();
+                            */
                             return;
                         }
                     }
@@ -151,7 +159,7 @@
         async function startCapture() {
             resetUI();
             video.style.display = 'block';
-            captureFrameBtn.style.display = 'inline-block';
+            captureFrameBtn.style.display = 'block';
             try {
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: 'environment' }
@@ -162,6 +170,7 @@
                 alert("Error: " + err.message);
                 stopCamera();
                 resetButtons();
+                resetUI();
             }
         }
 
@@ -180,29 +189,45 @@
                 video.style.display = 'none';
                 captureFrameBtn.style.display = 'none';
                 cropCanvas.style.display = 'block';
-                cropBtn.style.display = 'inline-block';
+                cropBtn.style.display = 'block';
                 
                 stopCamera();
             }
         }
 
-        cropCanvas.addEventListener('mousedown', (e) => {
+        function getPointerCoords(e) {
             const rect_canvas = cropCanvas.getBoundingClientRect();
             const scaleX = cropCanvas.width / rect_canvas.width;
             const scaleY = cropCanvas.height / rect_canvas.height;
-            startX = (e.clientX - rect_canvas.left) * scaleX;
-            startY = (e.clientY - rect_canvas.top) * scaleY;
+            let clientX, clientY;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            return {
+                x: (clientX - rect_canvas.left) * scaleX,
+                y: (clientY - rect_canvas.top) * scaleY
+            };
+        }
+
+        function handleStart(e) {
+            const coords = getPointerCoords(e);
+            startX = coords.x;
+            startY = coords.y;
             isDrawing = true;
             selection = { x: startX, y: startY, w: 0, h: 0 };
-        });
+        }
 
-        cropCanvas.addEventListener('mousemove', (e) => {
+        function handleMove(e) {
             if (!isDrawing) return;
-            const rect_canvas = cropCanvas.getBoundingClientRect();
-            const scaleX = cropCanvas.width / rect_canvas.width;
-            const scaleY = cropCanvas.height / rect_canvas.height;
-            const currentX = (e.clientX - rect_canvas.left) * scaleX;
-            const currentY = (e.clientY - rect_canvas.top) * scaleY;
+            if (e.touches && e.touches.length > 0) e.preventDefault();
+
+            const coords = getPointerCoords(e);
+            const currentX = coords.x;
+            const currentY = coords.y;
 
             selection.w = currentX - startX;
             selection.h = currentY - startY;
@@ -222,11 +247,19 @@
             ctx.strokeStyle = 'red';
             ctx.lineWidth = 2;
             ctx.strokeRect(selection.x, selection.y, selection.w, selection.h);
-        });
+        }
 
-        cropCanvas.addEventListener('mouseup', () => {
+        function handleEnd() {
             isDrawing = false;
-        });
+        }
+
+        cropCanvas.addEventListener('mousedown', handleStart);
+        cropCanvas.addEventListener('mousemove', handleMove);
+        cropCanvas.addEventListener('mouseup', handleEnd);
+
+        cropCanvas.addEventListener('touchstart', (e) => { handleStart(e); e.preventDefault(); }, {passive: false});
+        cropCanvas.addEventListener('touchmove', (e) => { handleMove(e); e.preventDefault(); }, {passive: false});
+        cropCanvas.addEventListener('touchend', handleEnd);
 
         async function cropAndSave() {
             const scale = cropCanvas.width / offscreenCanvas.width;
@@ -248,12 +281,11 @@
 
             tempCtx.drawImage(offscreenCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
             
-            const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/png'));
+            const blob = await new Promise(resolve => tempCanvas.toBlob(resolve, 'image/jpeg'));
             const arrayBuffer = await blob.arrayBuffer();
             const uint8Array = new Uint8Array(arrayBuffer);
-            
-            console.log("Cropped image byte array:", uint8Array);
-            alert("Cropped image saved to console as Uint8Array. Length: " + uint8Array.length);
+
+            var response = await fetch('/freezer/api/putimage/testing',{method:'POST',body:blob});
             
             resetUI();
             resetButtons();

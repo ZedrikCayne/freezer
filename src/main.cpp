@@ -19,6 +19,7 @@
 #include <crankshaft/jwtkeychain.h>
 #include <crankshaft/ssl.h>
 #include <crankshaft/util.h>
+#include <crankshaft/string.h>
 
 #include <crankshaft/websocket.h>
 
@@ -130,7 +131,59 @@ void dcCallback( struct CS_ClientInfo *info ) {
     CS_LOG_TRACE("Disconnecting.");
 }
 
+static const struct CS_String slash = CS_STRING("/");
+static const struct CS_String invalid_chars = CS_STRING(". &;?#");
+static const struct CS_String contentLength = CS_STRING("Content-Length");
+bool uploadImage( struct CS_ClientInfo *info ) {
+    struct CS_RequestInfo *request = &info->requestInfo;
+    const struct CS_String *parsedFile = CS_stringTempStrrstr( &request->uri, &slash );
+    if( !parsedFile || parsedFile->length < 5 ) {
+        return CS_serverReplyError(info, CS_RESPONSE_400, "Bad product ID." );
+    }
+    parsedFile = CS_stringSliceTempReference( parsedFile, 1, 0 );
+    const char *savePtr = NULL;
+    if( CS_stringTempStrtok( parsedFile, &invalid_chars, &savePtr ) )  {
+        return CS_serverReplyError(info, CS_RESPONSE_400, "Invalid characters in product id." );
+    }
+
+    const char *fileName = CS_tempBuffSnprintf(1024, "/freezer/products/upc_%*s.jpg", parsedFile->length, parsedFile->data );
+    const char *realFile = CS_tempBuffSnprintf(1024, "root%s", fileName);
+
+
+    const struct CS_String *length = CS_serverGetRequestHeader( info, &contentLength );
+    if( !length ) {
+        return CS_serverReplyError(info, CS_RESPONSE_411, "Need content length.");
+    }
+
+    FILE *oFile = fopen(realFile,"wb");
+
+    if( !oFile ) {
+        return CS_serverReplyError(info, CS_RESPONSE_500, "Unable to write file.");
+    }
+
+    int32_t numBytes = CS_stringAtoi( length );
+    int32_t numBytesWritten = 0;
+
+    if( CS_PP_dataSize( info->buffer ) > 0 ) {
+        numBytesWritten += CS_PP_writeToFILE( info->buffer, oFile );
+    }
+
+    while( numBytesWritten < numBytes ) {
+        if( CS_serverFillIncomingBuffer( info ) <= 0 ) {
+            return CS_serverReplyError(info, CS_RESPONSE_500, "Incoming data too small");
+        }
+        numBytesWritten += CS_PP_writeToFILE( info->buffer, oFile );
+    }
+    fclose( oFile );
+
+    struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
+    return CS_serverDoReply(info, reply);
+}
+
+struct CS_String api_put_image = CS_STRING("/freezer/api/putimage/");
+
 struct CS_Route serverRoutes[] = {
+    { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_put_image, uploadImage },
     { CS_HTTP_METHOD_HEAD, CS_ROUTE_TYPE_WILDCARD, NULL, CS_serverFileServer },
     { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_WILDCARD, NULL, CS_serverFileServer },
 };

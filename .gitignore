@@ -2,3 +2,5 @@ build/
 secrets/
 logs/
 *.swp
+.clangd
+root/freezer/products
