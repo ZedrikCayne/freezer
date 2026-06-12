@@ -211,6 +211,24 @@ bool googleLogin( struct CS_ClientInfo *info ) {
         sessionId = CS_uuid4CstringTemp();
         struct UserState *user = CreateUserState( googleId );
         user->admin = isAdmin;
+        const struct CS_String *queryForFreezer = CS_stringTempSnprintf( 2048, "SELECT freezerId FROM user_to_freezer WHERE userid = \"%s\";", googleId );
+        const struct CS_SqlResponse *response = CS_sqlQuery( freezerBackend, queryForFreezer );
+
+        if( !response || response->numRows == 0 ) {
+            //Create a new freezer.
+            CS_sqlReturnResponse(response);
+            const char *freezerId = CS_uuid4CstringTemp();
+            const struct CS_String *queryToAdd = CS_stringTempSnprintf( 2048, "INSERT INTO user_to_freezer (userId, freezerId) VALUES (\"%s\",\"%s\");", googleId, freezerId );
+            response = CS_sqlQuery( freezerBackend, queryToAdd );
+            if( response == NULL ) {
+                return loginPageReturn(info);
+            }
+            CS_stringCopyCstringToStatic( (struct CS_String*)&user->freezerId, 128, freezerId, -1 );
+            CS_sqlReturnResponse(response);
+        } else {
+            CS_stringCopyToStatic( (struct CS_String*)&user->freezerId, response->rows->values->stringValue, 128 );
+            CS_sqlReturnResponse(response);
+        }
         CS_hashtablePut( googleIdToSessionId, googleId, sessionId );
         CS_hashtablePut( cheapSessions, sessionId, user );
     }
