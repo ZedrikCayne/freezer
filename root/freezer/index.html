@@ -96,15 +96,25 @@
 
         let barcodeDetectorOn = false;
 
+        let lastClickedBarcode = null;
+
         let stream;
         let isDrawing = false;
         let startX, startY;
         let selection = { x: 0, y: 0, w: 0, h: 0 };
-        //let detectedBarcodes = [];
-        //let detectedBarcodes = [ { boundingBox: { x: 100, y: 100, width: 100, height: 100 } } ];
-        let detectedBarcodes = [{"boundingBox":{"x":151,"y":46,"width":115,"height":113,"top":46,"right":266,"bottom":159,"left":151},"cornerPoints":[{"x":151,"y":59},{"x":262,"y":46},{"x":266,"y":145},{"x":157,"y":159}],"format":"upc_a","rawValue":"041322225009"}];
+        let detectedBarcodes = [];
+
+        let pantryDb = {};
+        let currentSection = '';
 
         resetUI();
+
+        function getFullDb() {
+            let response = await fetch('/freezer/api/pantry');
+            if( response.ok ) {
+                pantryDb = await response.json();
+            }
+        }
 
         function logServer( logThis ) {
             fetch('/freezer/api/logbody',{ method:'POST', body:logThis });
@@ -118,6 +128,9 @@
             detectionCanvas.style.pointerEvents = 'none';
             captureFrameBtn.style.display = 'none';
             cropBtn.style.display = 'none';
+            offscreenCtx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.heigh );
+            detectionCtx.clearRect(0, 0, detectionCanvas.width, detectionCanvas.height);
+            detectedBarcodes = [];
         }
 
         function resetButtons() {
@@ -152,6 +165,7 @@
             video.style.display = 'block';
             detectionCanvas.style.display = 'block';
             detectionCanvas.style.pointerEvents = 'auto';
+            lastClickedBarcode = null;
 
             try {
                 stream = await navigator.mediaDevices.getUserMedia({
@@ -198,8 +212,8 @@
                     });
 
                     if (clickedBarcode) {
-                        //document.getElementById('barcodeResult').value = clickedBarcode.rawValue;
-                        document.getElementById('barcodeResult').value = JSON.stringify(clickedBarcode);
+                        document.getElementById('barcodeResult').value = clickedBarcode.rawValue;
+                        //document.getElementById('barcodeResult').value = JSON.stringify(clickedBarcode);
                         stopCamera();
                         resetButtons();
                         resetUI();
@@ -317,6 +331,8 @@
         cropCanvas.addEventListener('touchmove', (e) => { handleMove(e); e.preventDefault(); }, {passive: false});
         cropCanvas.addEventListener('touchend', handleEnd);
 
+        let pushMode = 'image';
+
         async function cropAndSave() {
             const scale = cropCanvas.width / offscreenCanvas.width;
             
@@ -341,7 +357,7 @@
             const arrayBuffer = await blob.arrayBuffer();
             const uint8Array = new Uint8Array(arrayBuffer);
 
-            var response = await fetch('/freezer/api/putimage/testing',{method:'POST',body:blob});
+            var response = await fetch('/freezer/api/put' + putMode + '/' + lastClickedBarcode,{method:'POST',body:blob});
             
             resetUI();
             resetButtons();
