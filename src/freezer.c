@@ -25,12 +25,16 @@
 #include <crankshaft/hashtable.h>
 #include <crankshaft/storage.h>
 #include <crankshaft/sql.h>
+#include <crankshaft/stringbuilder.h>
 
 #include "freezer.h"
 
 const struct CS_String create_user_to_freezer = CS_STRING("CREATE TABLE IF NOT EXISTS user_to_freezer ( userId TEXT(128) PRIMARY KEY, freezerId TEXT(128) );");
 const struct CS_String create_freezers = CS_STRING("CREATE TABLE IF NOT EXISTS freezers ( freezerId TEXT(128), upc TEXT(128), num INT(20), CONSTRAINT PK_freezers PRIMARY KEY (freezerId,upc) );");
 const struct CS_String create_user = CS_STRING("CREATE TABLE IF NOT EXISTS users ( firstPartyId TEXT(128), userId TEXT(128), idProvider INT(20) );");
+static const struct CS_String slash = CS_STRING("/");
+static const struct CS_String invalid_chars = CS_STRING(". &;?#");
+static const struct CS_String contentLength = CS_STRING("Content-Length");
 
 struct UserState {
     struct CS_String128 freezerId;
@@ -45,7 +49,7 @@ struct UserState *CreateUserState(const char *googleId) {
 }
 
 #define SESSION_COOKIE_NAME &CS_STRING("freezer_session")
-struct CS_String googleLoginUri = CS_STRING("/freezer/googlelogin");
+const struct CS_String googleLoginUri = CS_STRING("/freezer/googlelogin");
 
 static const struct CS_Storage *longTermStorage = NULL;
 static struct CS_HashTable *cheapSessions = NULL;
@@ -149,6 +153,35 @@ bool loginPageReturn( struct CS_ClientInfo *info ) {
     return true;
 }
 
+const struct CS_String logBodyUri = CS_STRING("/freezer/api/logbody");
+bool logBody( struct CS_ClientInfo *info ) {
+    struct CS_StringBuilder *sb = CS_SB_create( 8192 );
+    const struct CS_String *length = CS_serverGetRequestHeader( info, &contentLength );
+    if( !length ) {
+        return CS_serverReplyError(info, CS_RESPONSE_411, "Need content length.");
+    }
+    int32_t numBytes = CS_stringAtoi( length );
+    int32_t numBytesWritten = 0;
+
+    if( CS_PP_dataSize( info->buffer ) > 0 ) {
+        numBytesWritten += CS_PP_dataSize( info->buffer );
+        CS_SB_appendBytes( sb, CS_PP_startOfData( info->buffer ), CS_PP_dataSize( info->buffer ) );
+        CS_PP_write( info->buffer, CS_PP_dataSize(info->buffer) );
+    }
+
+    while( numBytesWritten < numBytes ) {
+        if( CS_serverFillIncomingBuffer( info ) <= 0 ) {
+            return CS_serverReplyError(info, CS_RESPONSE_500, "Incoming data too small");
+        }
+        CS_SB_appendBytes( sb, CS_PP_startOfData( info->buffer ), CS_PP_dataSize( info->buffer ) );
+        numBytesWritten += CS_PP_write( info->buffer, CS_PP_dataSize(info->buffer) );
+    }
+    CS_LOG_LOUD("LOG BODY: %s",sb->buffer);
+    CS_SB_free( sb );
+    struct CS_Reply *reply = CS_serverCreateReply( info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0 );
+    return CS_serverDoReply( info, reply );
+}
+
 bool cookieFilter( struct CS_ClientInfo *info ) {
     const struct CS_String *cookieValue = CS_serverGetRequestCookie( info, SESSION_COOKIE_NAME );
     if( cookieValue != NULL ) {
@@ -242,9 +275,6 @@ bool killFreezer() {
     return false;
 }
 
-static const struct CS_String slash = CS_STRING("/");
-static const struct CS_String invalid_chars = CS_STRING(". &;?#");
-static const struct CS_String contentLength = CS_STRING("Content-Length");
 bool uploadImage( struct CS_ClientInfo *info ) {
     struct CS_RequestInfo *request = &info->requestInfo;
     const struct CS_String *parsedFile = CS_stringTempStrrstr( &request->uri, &slash );

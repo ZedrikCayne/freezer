@@ -140,6 +140,7 @@ struct CS_String api_google_login = CS_STRING("/freezer/googlelogin");
 struct CS_Route serverRoutes[] = {
     { CS_HTTP_METHOD_ANY,  CS_ROUTE_TYPE_EXACT, &googleLoginUri, googleLogin },
     { CS_HTTP_METHOD_ANY,  CS_ROUTE_TYPE_FILTER, NULL, cookieFilter },
+    { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &logBodyUri, logBody },
     { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_PREFIX, &api_get_product, getProduct },
     { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_put_image, uploadImage },
     { CS_HTTP_METHOD_HEAD, CS_ROUTE_TYPE_WILDCARD, NULL, CS_serverFileServer },

@@ -8,7 +8,9 @@ bool startupFreezer( const char *adminEmail );
 bool stopFreezer();
 
 bool cookieFilter( struct CS_ClientInfo *info );
-extern struct CS_String googleLoginUri;
+extern const struct CS_String logBodyUri;
+bool logBody( struct CS_ClientInfo *info );
+extern const struct CS_String googleLoginUri;
 bool googleLogin( struct CS_ClientInfo *info );
 bool uploadImage( struct CS_ClientInfo *info );
 bool getProduct( struct CS_ClientInfo *info );
