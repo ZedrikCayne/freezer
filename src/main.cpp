@@ -23,6 +23,7 @@
 
 #include <crankshaft/websocket.h>
 
+#include "freezerapi.h"
 #include "freezer.h"
 
 int acceptSocket = 0;
@@ -133,19 +134,6 @@ void dcCallback( struct CS_ClientInfo *info ) {
     CS_LOG_TRACE("Disconnecting.");
 }
 
-struct CS_String api_put_image = CS_STRING("/freezer/api/putimage/");
-struct CS_String api_get_product = CS_STRING("/freezer/api/putimage/");
-struct CS_String api_google_login = CS_STRING("/freezer/googlelogin");
-
-struct CS_Route serverRoutes[] = {
-    { CS_HTTP_METHOD_ANY,  CS_ROUTE_TYPE_EXACT, &googleLoginUri, googleLogin },
-    { CS_HTTP_METHOD_ANY,  CS_ROUTE_TYPE_FILTER, NULL, cookieFilter },
-    { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &logBodyUri, logBody },
-    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_PREFIX, &api_get_product, getProduct },
-    { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_put_image, uploadImage },
-    { CS_HTTP_METHOD_HEAD, CS_ROUTE_TYPE_WILDCARD, NULL, CS_serverFileServer },
-    { CS_HTTP_METHOD_GET,  CS_ROUTE_TYPE_WILDCARD, NULL, CS_serverFileServer },
-};
 
 int main(int argc, char *argv[] ) {
     const char * error = CS_argsParse(argc, argv, &myCS_ArgTable);
@@ -200,7 +188,7 @@ int main(int argc, char *argv[] ) {
     const char *adminEmail = getenv("ADMIN_EMAIL");
     if( !startupFreezer(adminEmail) ) {
         CS_LOG_INFO("Starting web server.");
-        struct CS_WebServer *server = CS_serverStart( portNum, certFile, keyFile, selfSignHostname, fileServingDir, fileServingFile, cacheTimeInSeconds, serverRoutes, sizeof(serverRoutes)/sizeof(serverRoutes[0]) );
+        struct CS_WebServer *server = CS_serverStart( portNum, certFile, keyFile, selfSignHostname, fileServingDir, fileServingFile, cacheTimeInSeconds, freezerRoutes, numFreezerRoutes() );
         if( server != NULL ) {
             CS_LOG_INFO("Server started at port %d", server->serverPort);
             while(!GotInterrupt) {

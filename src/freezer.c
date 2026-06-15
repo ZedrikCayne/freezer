@@ -29,9 +29,22 @@
 
 #include "freezer.h"
 
-const struct CS_String create_user_to_freezer = CS_STRING("CREATE TABLE IF NOT EXISTS user_to_freezer ( userId TEXT(128) PRIMARY KEY, freezerId TEXT(128) );");
-const struct CS_String create_freezers = CS_STRING("CREATE TABLE IF NOT EXISTS freezers ( freezerId TEXT(128), upc TEXT(128), num INT(20), CONSTRAINT PK_freezers PRIMARY KEY (freezerId,upc) );");
-const struct CS_String create_user = CS_STRING("CREATE TABLE IF NOT EXISTS users ( firstPartyId TEXT(128), userId TEXT(128), idProvider INT(20) );");
+const struct CS_String create_user_to_freezer = CS_STRING("CREATE TABLE IF NOT EXISTS user_to_freezer ( userId TEXT(128) PRIMARY KEY, freezerId TEXT(128), admin BOOLEAN, owner BOOLEAN );");
+const struct CS_String freezer_names = CS_STRING("CREATE TABLE IF NOT EXISTS freezer_names ( freezerId TEXT(128) PRIMARY KEY, freezer_name TEXT(128) )");
+const struct CS_String create_freezers = CS_STRING("CREATE TABLE IF NOT EXISTS freezers ( freezerId TEXT(128), section TEXT(128), upc TEXT(128), num INT, CONSTRAINT PK_freezers PRIMARY KEY (freezerId,section,upc) );");
+const struct CS_String create_user = CS_STRING("CREATE TABLE IF NOT EXISTS users ( userId TEXT(128) PRIMARY KEY, email TEXT(128) );");
+const struct CS_String create_items = CS_STRING("CREATE TABLE IF NOT EXISTS items ( upc TEXT(128) PRIMARY KEY, image BOOLEAN, instructions BOOLEAN, nutrition BOOLEAN );");
+const struct CS_String invited = CS_STRING("CREATE TABLE IF NOT EXISTS invites ( email TEXT(128), freezerId TEXT(128), by TEXT(128), accepted BOOLEAN, acknowledged BOOLEAN, CONSTRAINT PK_invites PRIMARY KEY (email,freezerId) )");
+
+const struct CS_String *creates[] = {
+    &create_user_to_freezer,
+    &freezer_names,
+    &create_freezers,
+    &create_user,
+    &create_items,
+    &invited
+};
+
 static const struct CS_String slash = CS_STRING("/");
 static const struct CS_String invalid_chars = CS_STRING(". &;?#");
 static const struct CS_String contentLength = CS_STRING("Content-Length");
@@ -71,19 +84,11 @@ bool startupFreezer( const char *inputAdminEmail ) {
     cheapSessions = CS_HASHTABLE_STRING_VOID( 256, CS_HASHTABLE_FLAG_MUTEX|CS_HASHTABLE_FLAG_VERY_PEDANTIC);
     if( !cheapSessions ) return true;
 
-    CS_LOG_LOUD("Create user");
-    const struct CS_SqlResponse *response = CS_sqlQuery( freezerBackend, &create_user );
-    if( response == NULL ) return true;
-    CS_sqlReturnResponse( response );
-    CS_LOG_LOUD("Create user to freezer");
-    response = CS_sqlQuery( freezerBackend, &create_user_to_freezer);
-    if( response == NULL ) return true;
-    CS_sqlReturnResponse( response );
-    CS_LOG_LOUD("Create freezers");
-    response = CS_sqlQuery( freezerBackend, &create_freezers );
-    if( response == NULL ) return true;
-    CS_sqlReturnResponse( response );
-
+    for( int i = 0; i < CS_ARRAY_SIZE(creates); ++i ) {
+        const struct CS_SqlResponse *response = CS_sqlQuery( freezerBackend, creates[i] );
+        if( response == NULL ) return true;
+        CS_sqlReturnResponse( response );
+    }
     
     return false;
 }
@@ -287,7 +292,7 @@ bool uploadImage( struct CS_ClientInfo *info ) {
         return CS_serverReplyError(info, CS_RESPONSE_400, "Invalid characters in product id." );
     }
 
-    const char *fileName = CS_tempBuffSnprintf(1024, "/freezer/products/upc_%*s.jpg", parsedFile->length, parsedFile->data );
+    const char *fileName = CS_tempBuffSnprintf(1024, "/freezer/products/upc_%s_%s.jpg", CS_stringTempCstring(parsedFile), (char*)info->appData );
     const char *realFile = CS_tempBuffSnprintf(1024, "root%s", fileName);
 
     const struct CS_String *length = CS_serverGetRequestHeader( info, &contentLength );
@@ -321,27 +326,68 @@ bool uploadImage( struct CS_ClientInfo *info ) {
 }
 
 
+
+
+bool deleteImage( struct CS_ClientInfo *info ) {
+return true;
+}
 bool getProduct( struct CS_ClientInfo *info ) {
-    return false;
+return true;
 }
-
-bool getPantry( struct CS_ClientInfo *info ) {
-    return false;
+bool deleteProduct( struct CS_ClientInfo *info ) {
+return true;
 }
-
+bool getMessages( struct CS_ClientInfo *info ) {
+return true;
+}
+bool deleteMessage( struct CS_ClientInfo *info ) {
+return true;
+}
+bool acceptMessage( struct CS_ClientInfo *info ) {
+return true;
+}
+bool sendMessage( struct CS_ClientInfo *info ) {
+return true;
+}
+bool getFamily( struct CS_ClientInfo *info ) {
+return true;
+}
+bool inviteFamilyMember( struct CS_ClientInfo *info ) {
+return true;
+}
+bool removeFamilyMember( struct CS_ClientInfo *info ) {
+return true;
+}
 bool addItem( struct CS_ClientInfo *info ) {
-    return false;
+return true;
 }
-
 bool removeItem( struct CS_ClientInfo *info ) {
-    return false;
+return true;
 }
-
-bool deletePantrySection( struct CS_ClientInfo *info ) {
-    return false;
+bool addSection( struct CS_ClientInfo *info ) {
+return true;
 }
-
-bool createPantrySection( struct CS_ClientInfo *info ) {
-    return false;
+bool removeSection( struct CS_ClientInfo *info ) {
+return true;
 }
-
+bool switchSection( struct CS_ClientInfo *info ) {
+return true;
+}
+bool switchFreezer( struct CS_ClientInfo *info ) {
+return true;
+}
+bool removeFreezer( struct CS_ClientInfo *info ) {
+return true;
+}
+bool addFreezer( struct CS_ClientInfo *info ) {
+return true;
+}
+bool allowAddEmail( struct CS_ClientInfo *info ) {
+return true;
+}
+bool allowRemoveEmail( struct CS_ClientInfo *info ) {
+return true;
+}
+bool allowBanEmail( struct CS_ClientInfo *info ) {
+return true;
+}

@@ -32,13 +32,6 @@
             cursor: crosshair;
             touch-action: none;
         }
-        #dbg {
-            width: 100%;
-            max-width: 500px;
-            border: 1px solid #ccc;
-            margin-top: 20px;
-            touch-action: none;
-        }
         .controls {
             margin-bottom: 20px;
             text-align: center;
@@ -70,8 +63,6 @@
         <button id="captureBtn">Start Camera for Picture</button>
     </div>
 
-    <input type="text" id="barcodeResult" placeholder="Barcode value will appear here" readonly>
-
     <button id="captureFrameBtn" class="ui-overlay" style="position:absolute;top:80%;left:45%;right:55%;bottom:90%;display:none;">Capture Frame</button>
     <button id="cropBtn" class="ui-overlay" style="position:absolute;top:80%;left:45%;right:55%;bottom:90%;display:none;">Crop &amp; Save</button>
     <video id="video" playsinline autoplay></video>
@@ -79,8 +70,6 @@
     <canvas id="cropCanvas" style="ui-overlay; position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
 
     <script>
-        var pantry = {};
-        const dbg = document.getElementById('dbg');
         const scanBtn = document.getElementById('scanBtn');
         const captureBtn = document.getElementById('captureBtn');
         const captureFrameBtn = document.getElementById('captureFrameBtn');
@@ -96,7 +85,7 @@
 
         let barcodeDetectorOn = false;
 
-        let lastClickedBarcode = null;
+        let currentUPC = null;
 
         let stream;
         let isDrawing = false;
@@ -104,21 +93,11 @@
         let selection = { x: 0, y: 0, w: 0, h: 0 };
         let detectedBarcodes = [];
 
-        let pantryDb = {};
+        let messages = [];
+        let freezerDb = {};
         let currentSection = '';
 
         resetUI();
-
-        function getFullDb() {
-            let response = await fetch('/freezer/api/pantry');
-            if( response.ok ) {
-                pantryDb = await response.json();
-            }
-        }
-
-        function logServer( logThis ) {
-            fetch('/freezer/api/logbody',{ method:'POST', body:logThis });
-        }
 
         function resetUI() {
             barcodeDetectorOn = false;
@@ -165,7 +144,7 @@
             video.style.display = 'block';
             detectionCanvas.style.display = 'block';
             detectionCanvas.style.pointerEvents = 'auto';
-            lastClickedBarcode = null;
+            currentUPC = null;
 
             try {
                 stream = await navigator.mediaDevices.getUserMedia({
@@ -180,7 +159,6 @@
                 } catch (e) {
                     logServer( e.message );
                 }
-                
 
                 async function detectBarcodes() {
                     if (video.readyState === video.HAVE_ENOUGH_DATA) {
@@ -212,8 +190,7 @@
                     });
 
                     if (clickedBarcode) {
-                        document.getElementById('barcodeResult').value = clickedBarcode.rawValue;
-                        //document.getElementById('barcodeResult').value = JSON.stringify(clickedBarcode);
+                        currentUPC = clickedBarcode.rawValue;
                         stopCamera();
                         resetButtons();
                         resetUI();
@@ -357,7 +334,7 @@
             const arrayBuffer = await blob.arrayBuffer();
             const uint8Array = new Uint8Array(arrayBuffer);
 
-            var response = await fetch('/freezer/api/put' + putMode + '/' + lastClickedBarcode,{method:'POST',body:blob});
+            var response = await fetch('/freezer/api/put' + putMode + '/' + currentUPC,{method:'POST',body:blob});
             
             resetUI();
             resetButtons();

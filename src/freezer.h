@@ -8,9 +8,7 @@ bool startupFreezer( const char *adminEmail );
 bool stopFreezer();
 
 bool cookieFilter( struct CS_ClientInfo *info );
-extern const struct CS_String logBodyUri;
 bool logBody( struct CS_ClientInfo *info );
-extern const struct CS_String googleLoginUri;
 bool googleLogin( struct CS_ClientInfo *info );
 bool uploadImage( struct CS_ClientInfo *info );
 bool getProduct( struct CS_ClientInfo *info );
@@ -18,7 +16,27 @@ bool getPantry( struct CS_ClientInfo *info );
 bool addItem( struct CS_ClientInfo *info );
 bool deletePantrySection( struct CS_ClientInfo *info );
 bool createPantrySection( struct CS_ClientInfo *info );
-
+bool deleteImage( struct CS_ClientInfo *info );
+bool getProduct( struct CS_ClientInfo *info );
+bool deleteProduct( struct CS_ClientInfo *info );
+bool getMessages( struct CS_ClientInfo *info );
+bool deleteMessage( struct CS_ClientInfo *info );
+bool acceptMessage( struct CS_ClientInfo *info );
+bool sendMessage( struct CS_ClientInfo *info );
+bool getFamily( struct CS_ClientInfo *info );
+bool inviteFamilyMember( struct CS_ClientInfo *info );
+bool removeFamilyMember( struct CS_ClientInfo *info );
+bool addItem( struct CS_ClientInfo *info );
+bool removeItem( struct CS_ClientInfo *info );
+bool addSection( struct CS_ClientInfo *info );
+bool removeSection( struct CS_ClientInfo *info );
+bool switchSection( struct CS_ClientInfo *info );
+bool switchFreezer( struct CS_ClientInfo *info );
+bool removeFreezer( struct CS_ClientInfo *info );
+bool addFreezer( struct CS_ClientInfo *info );
+bool allowAddEmail( struct CS_ClientInfo *info );
+bool allowRemoveEmail( struct CS_ClientInfo *info );
+bool allowBanEmail( struct CS_ClientInfo *info );
 
 #ifdef __cplusplus
 }
