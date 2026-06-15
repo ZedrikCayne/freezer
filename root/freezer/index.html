@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>What's in my Pantry?</title>
     <script src="/freezer/dabus.js"></script>
+    <script src="/freezer/api.js"></script>
     <style>
         body {
             background-color: #252525;
@@ -228,7 +229,7 @@
                 offscreenCanvas.height = video.videoHeight;
                 offscreenCtx.drawImage(video, 0, 0, offscreenCanvas.width, offscreenCanvas.height);
 
-                const scale = Math.min(500 / offscreenCanvas.width, 500 / offscreenCanvas.height, 1);
+                const scale = Math.min(1024 / offscreenCanvas.width, 1024 / offscreenCanvas.height, 1);
                 cropCanvas.width = offscreenCanvas.width * scale;
                 cropCanvas.height = offscreenCanvas.height * scale;
                 

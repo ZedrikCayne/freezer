@@ -391,3 +391,6 @@ return true;
 bool allowBanEmail( struct CS_ClientInfo *info ) {
 return true;
 }
+bool CS_serverFileServer( struct CS_ClientInfo *info ) {
+return true;
+}

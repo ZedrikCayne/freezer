@@ -1,0 +1,44 @@
+JSCRIPT="root/freezer/api.js"
+
+if [ -f ${JSCRIPT} ]; then rm ${JSCRIPT}; fi
+
+SERVER_PREFIX="/freezer/"
+URI_POSTFIX="_uri"
+
+echo "const ServerApi = {" >  ${JSCRIPT}
+
+
+PREFIX_CHAR=""
+IFS=,
+while read API_NAME TYPE METHOD CFUNC EXTRA; do
+    API_PATH=$(echo $API_NAME | sed 's|_|/|g')
+    THIS_URI="/${API_PATH}${URI_POSTFIX}"
+    if [ $TYPE == "FILTER" ]; then
+        THIS_URI="NULL"
+    fi
+    if [ $TYPE == "WILDCARD" ]; then
+        THIS_URI="NULL"
+    fi
+    if [ $THIS_URI != "NULL" ]; then
+        echo "${PREFIX_CHAR}" >> ${JSCRIPT}
+        if [ $TYPE == "EXACT" ]; then
+            echo "\"${API_NAME}\": function ${API_NAME}(jsonObject) {" >> ${JSCRIPT}
+            echo "    if( jsonObject === undefined ) {" >> ${JSCRIPT}
+            echo "        fetch( \"${THIS_URI}\",{method:\"${METHOD}\"} ).then( response => { DaBus.post(\"${API_NAME}\", response ); } );" >> ${JSCRIPT}
+            echo "    } else {" >> ${JSCRIPT}
+            echo "        fetch( \"${THIS_URI}\",{method:\"${METHOD}\",body:jsonObject} ).then( response => { DaBus.post(\"${API_NAME}\", response); } );" >> ${JSCRIPT}
+            echo "    } }" >> ${JSCRIPT}
+        else
+            echo "\"${API_NAME}\": function ${API_NAME}(what,jsonObject) {" >> ${JSCRIPT}
+            echo "    if( jsonObject === undefined ) {" >> ${JSCRIPT}
+            echo "        fetch( \"${THIS_URI}/\" + what,{method:\"${METHOD}\"} ).then( DaBus.post(\"${API_NAME}\", response) );" >> ${JSCRIPT}
+            echo "    } else {" >> ${JSCRIPT}
+            echo "        fetch( \"${THIS_URI}/\" + what,{method:\"${METHOD}\",body:jsonObject} ).then( response => { DaBus.post(\"${API_NAME}\", response); } );" >> ${JSCRIPT}
+            echo "    } }" >> ${JSCRIPT}
+        fi
+        PREFIX_CHAR=","
+    fi
+
+done < api/freezerapidefn.csv
+
+echo "};" >> ${JSCRIPT}
