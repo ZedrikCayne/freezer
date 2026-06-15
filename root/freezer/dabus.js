@@ -20,8 +20,8 @@ const DaBus = {
         hooks[what].forEach( (aHook, index) => { if(aHook.to === to) indexToDitch = index; } );
         if( indexToDitch !== -1 ) hooks[what].splice( indexToDitch, 1 );
     },
-    post: function post(what,to) {
-        var newObject = {"what":what,"with":to};
+    post: function post(what,anObject) {
+        var newObject = {"what":what,"with":anObject};
         DaBus.busline.push(newObject);
         DaBus.kickProcessor();
     },

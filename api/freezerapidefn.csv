@@ -24,8 +24,8 @@ api_section_switch,PREFIX,POST,switchSection
 api_freezer_switch,PREFIX,POST,switchFreezer
 api_freezer_remove,PREFIX,POST,removeFreezer
 api_freezer_add,PREFIX,POST,addFreezer
-api_allow_add,PREFIX,POST,allowAddEmail
-api_allow_remove,PREFIX,POST,allowRemoveEmail
-api_allow_ban,PREFIX,POST,allowBanEmail
+api_allow_add,EXACT,POST,allowAddEmail
+api_allow_remove,EXACT,POST,allowRemoveEmail
+api_allow_ban,EXACT,POST,allowBanEmail
 api_wildcard_get,WILDCARD,GET,CS_serverFileServer
 api_wildcard_head,WILDCARD,HEAD,CS_serverFileServer

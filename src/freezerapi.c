@@ -62,9 +62,9 @@ struct CS_Route freezerRoutes[] = {
 { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_freezer_switch_uri, switchFreezer, NULL },
 { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_freezer_remove_uri, removeFreezer, NULL },
 { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_freezer_add_uri, addFreezer, NULL },
-{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_allow_add_uri, allowAddEmail, NULL },
-{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_allow_remove_uri, allowRemoveEmail, NULL },
-{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_allow_ban_uri, allowBanEmail, NULL },
+{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &api_allow_add_uri, allowAddEmail, NULL },
+{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &api_allow_remove_uri, allowRemoveEmail, NULL },
+{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &api_allow_ban_uri, allowBanEmail, NULL },
 { CS_HTTP_METHOD_GET, CS_ROUTE_TYPE_WILDCARD, NULL, CS_serverFileServer, NULL },
 { CS_HTTP_METHOD_HEAD, CS_ROUTE_TYPE_WILDCARD, NULL, CS_serverFileServer, NULL },
 };
