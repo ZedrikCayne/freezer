@@ -1,8 +1,8 @@
 googlelogin,EXACT,ANY,googleLogin
-cookiefilter,FILTER,POST,cookieFilter
+cookiefilter,FILTER,ANY,cookieFilter
 api_logbody,EXACT,POST,logBody
-api_product_putimage,PREFIX,GET,uploadImage,image
-api_product_putinfo,PREFIX,GET,uploadImage,info
+api_product_putimage,PREFIX,POST,uploadImage,image
+api_product_putinfo,PREFIX,POST,uploadImage,info
 api_product_putnutrition,PREFIX,POST,uploadImage,nutrition
 api_product_deleteimage,PREFIX,POST,deleteImage,image
 api_product_deleteinfo,PREFIX,POST,deleteImage,info

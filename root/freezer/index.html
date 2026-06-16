@@ -99,6 +99,10 @@
         let freezerDb = {};
         let currentSection = '';
 
+        function genericReceiver( what, postedWith, toObject ) {
+            alert(what);
+        }
+
         resetUI();
 
         function resetUI() {
@@ -124,6 +128,10 @@
                 stream.getTracks().forEach(track => track.stop());
                 stream = null;
             }
+        }
+
+        function logServer(what) {
+            ServerApi.api_logbody(what);
         }
 
         function drawDetectionBoxes() {
@@ -312,6 +320,7 @@
 
         let pushMode = 'image';
 
+
         async function cropAndSave() {
             const scale = cropCanvas.width / offscreenCanvas.width;
             
@@ -336,7 +345,8 @@
             const arrayBuffer = await blob.arrayBuffer();
             const uint8Array = new Uint8Array(arrayBuffer);
 
-            var response = await fetch('/freezer/api/put' + putMode + '/' + currentUPC,{method:'POST',body:blob});
+            ServerApi.api_logbody( "Logging." );
+            ServerApi.api_product_putimage( currentUPC, blob );
             
             resetUI();
             resetButtons();
@@ -346,6 +356,10 @@
         captureBtn.addEventListener('click', startCapture);
         captureFrameBtn.addEventListener('click', captureFrame);
         cropBtn.addEventListener('click', cropAndSave);
+
+        window.onload = function() {
+            DaBus.hook("api_product_putimage", genericReceiver);
+        };
 
     </script>
 </body>

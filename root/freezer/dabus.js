@@ -8,17 +8,17 @@ const DaBus = {
     },
     hook: function hook(what,how,to) {
         var newObject = {"how":how,"to":to};
-        if( hooks[what] === undefined ) {
-            hooks[what] = [newObject];
+        if( DaBus.hooks[what] === undefined ) {
+            DaBus.hooks[what] = [newObject];
         } else {
-            hooks[what].push(newObject);
+            DaBus.hooks[what].push(newObject);
         }
     },
     unhook: function unhook(what,to) {
-        if( hooks[what] === undefined ) return;
+        if( Dabus.hooks[what] === undefined ) return;
         var indexToDitch = -1;
-        hooks[what].forEach( (aHook, index) => { if(aHook.to === to) indexToDitch = index; } );
-        if( indexToDitch !== -1 ) hooks[what].splice( indexToDitch, 1 );
+        DaBus.hooks[what].forEach( (aHook, index) => { if(aHook.how === how) indexToDitch = index; } );
+        if( indexToDitch !== -1 ) DaBus.hooks[what].splice( indexToDitch, 1 );
     },
     post: function post(what,anObject) {
         var newObject = {"what":what,"with":anObject};
@@ -32,11 +32,12 @@ const DaBus = {
         }
     },
     process: async function process() {
-        while( busline.length > 0 ) {
-            var thingToProcess = busline.pop();
+        while( DaBus.busline.length > 0 ) {
+            var thingToProcess = DaBus.busline.pop();
             var hooks = DaBus.hooks[thingToProcess.what];
             if( hooks !== undefined ) {
-                hooks.forEach( (hookup) => { hookup.to[hookup.how](hookup.with); } );
+                hooks.forEach( (hookup) =>
+                    { hookup.how(thingToProcess.what,hookup.with,hookup.to); } );
             }
         }
         DaBus.processing = false;

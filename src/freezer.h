@@ -42,3 +42,4 @@ bool allowBanEmail( struct CS_ClientInfo *info );
 }
 #endif
 bool CS_serverFileServer( struct CS_ClientInfo *info );
+bool CS_serverFileServer( struct CS_ClientInfo *info );

@@ -12,7 +12,7 @@ PREFIX_CHAR=""
 IFS=,
 while read API_NAME TYPE METHOD CFUNC EXTRA; do
     API_PATH=$(echo $API_NAME | sed 's|_|/|g')
-    THIS_URI="/${API_PATH}"
+    THIS_URI="${SERVER_PREFIX}${API_PATH}"
     if [ $TYPE == "FILTER" ]; then
         THIS_URI="NULL"
     fi
@@ -23,18 +23,22 @@ while read API_NAME TYPE METHOD CFUNC EXTRA; do
         echo "${PREFIX_CHAR}" >> ${JSCRIPT}
         if [ $TYPE == "EXACT" ]; then
             echo "\"${API_NAME}\": function ${API_NAME}(thing) {" >> ${JSCRIPT}
+            echo "let retries = 2; while (retries > 0) { try {" >> ${JSCRIPT}
             echo "    if( thing === undefined ) {" >> ${JSCRIPT}
-            echo "        fetch( \"${THIS_URI}\",{method:\"${METHOD}\"} ).then( response => { DaBus.post(\"${API_NAME}\", response ); } );" >> ${JSCRIPT}
+            echo "        fetch( \"${THIS_URI}\",{credentials:\"same-origin\",method:\"${METHOD}\"} ).then( response => { DaBus.post(\"${API_NAME}\", response ); } );" >> ${JSCRIPT}
             echo "    } else {" >> ${JSCRIPT}
-            echo "        fetch( \"${THIS_URI}\",{method:\"${METHOD}\",body:thing} ).then( response => { DaBus.post(\"${API_NAME}\", response); } );" >> ${JSCRIPT}
-            echo "    } }" >> ${JSCRIPT}
+            echo "        fetch( \"${THIS_URI}\",{credentials:\"same-origin\",method:\"${METHOD}\",body:thing} ).then( response => { DaBus.post(\"${API_NAME}\", response); } );" >> ${JSCRIPT}
+            echo "    } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};" >> ${JSCRIPT}
+            echo "} }" >> ${JSCRIPT}
         else
             echo "\"${API_NAME}\": function ${API_NAME}(what,thing) {" >> ${JSCRIPT}
+            echo "let retries = 2; while (retries > 0) { try {" >> ${JSCRIPT}
             echo "    if( thing === undefined ) {" >> ${JSCRIPT}
-            echo "        fetch( \"${THIS_URI}/\" + what,{method:\"${METHOD}\"} ).then( DaBus.post(\"${API_NAME}\", response) );" >> ${JSCRIPT}
+            echo "        fetch( \"${THIS_URI}/\" + what,{credentials:\"same-origin\",method:\"${METHOD}\"} ).then( DaBus.post(\"${API_NAME}\", response) );" >> ${JSCRIPT}
             echo "    } else {" >> ${JSCRIPT}
-            echo "        fetch( \"${THIS_URI}/\" + what,{method:\"${METHOD}\",body:thing} ).then( response => { DaBus.post(\"${API_NAME}\", response); } );" >> ${JSCRIPT}
-            echo "    } }" >> ${JSCRIPT}
+            echo "        fetch( \"${THIS_URI}/\" + what,{credentials:\"same-origin\",method:\"${METHOD}\",body:thing} ).then( response => { DaBus.post(\"${API_NAME}\", response); } );" >> ${JSCRIPT}
+            echo "    } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};" >> ${JSCRIPT}
+            echo "} }" >> ${JSCRIPT}
         fi
         PREFIX_CHAR=","
     fi
