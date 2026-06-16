@@ -288,7 +288,8 @@ bool uploadImage( struct CS_ClientInfo *info ) {
     }
     parsedFile = CS_stringSliceTempReference( parsedFile, 1, -1 );
     const char *savePtr = NULL;
-    if( CS_stringTempStrtok( parsedFile, &invalid_chars, &savePtr ) )  {
+    const struct CS_String *maybeToken = CS_stringTempStrtok( parsedFile, &invalid_chars, &savePtr );
+    if( maybeToken && CS_stringStrcmp(parsedFile,maybeToken) )  {
         return CS_serverReplyError(info, CS_RESPONSE_400, "Invalid characters in product id." );
     }
 
