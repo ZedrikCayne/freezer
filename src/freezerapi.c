@@ -25,8 +25,10 @@ const struct CS_String api_family_remove_uri = CS_STRING("/freezer/api/family/re
 const struct CS_String api_item_add_uri = CS_STRING("/freezer/api/item/add");
 const struct CS_String api_item_remove_uri = CS_STRING("/freezer/api/item/remove");
 const struct CS_String api_section_add_uri = CS_STRING("/freezer/api/section/add");
+const struct CS_String api_section_list_uri = CS_STRING("/freezer/api/section/list");
 const struct CS_String api_section_remove_uri = CS_STRING("/freezer/api/section/remove");
 const struct CS_String api_section_switch_uri = CS_STRING("/freezer/api/section/switch");
+const struct CS_String api_freezer_list_uri = CS_STRING("/freezer/api/freezer/list");
 const struct CS_String api_freezer_switch_uri = CS_STRING("/freezer/api/freezer/switch");
 const struct CS_String api_freezer_remove_uri = CS_STRING("/freezer/api/freezer/remove");
 const struct CS_String api_freezer_add_uri = CS_STRING("/freezer/api/freezer/add");
@@ -57,8 +59,10 @@ struct CS_Route freezerRoutes[] = {
 { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_item_add_uri, addItem, NULL },
 { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_item_remove_uri, removeItem, NULL },
 { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_section_add_uri, addSection, NULL },
+{ CS_HTTP_METHOD_GET, CS_ROUTE_TYPE_EXACT, &api_section_list_uri, listSection, NULL },
 { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_section_remove_uri, removeSection, NULL },
 { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_section_switch_uri, switchSection, NULL },
+{ CS_HTTP_METHOD_GET, CS_ROUTE_TYPE_PREFIX, &api_freezer_list_uri, listFreezer, NULL },
 { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_freezer_switch_uri, switchFreezer, NULL },
 { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_freezer_remove_uri, removeFreezer, NULL },
 { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_freezer_add_uri, addFreezer, NULL },

@@ -19,8 +19,10 @@ api_family_remove,PREFIX,POST,removeFamilyMember
 api_item_add,PREFIX,POST,addItem
 api_item_remove,PREFIX,POST,removeItem
 api_section_add,PREFIX,POST,addSection
+api_section_list,EXACT,GET,listSection
 api_section_remove,PREFIX,POST,removeSection
 api_section_switch,PREFIX,POST,switchSection
+api_freezer_list,PREFIX,GET,listFreezer
 api_freezer_switch,PREFIX,POST,switchFreezer
 api_freezer_remove,PREFIX,POST,removeFreezer
 api_freezer_add,PREFIX,POST,addFreezer

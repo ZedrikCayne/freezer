@@ -31,14 +31,27 @@
 
 const struct CS_String create_user_to_freezer = CS_STRING("CREATE TABLE IF NOT EXISTS user_to_freezer ( userId TEXT(128) PRIMARY KEY, freezerId TEXT(128), admin BOOLEAN, owner BOOLEAN );");
 const struct CS_String freezer_names = CS_STRING("CREATE TABLE IF NOT EXISTS freezer_names ( freezerId TEXT(128) PRIMARY KEY, freezer_name TEXT(128) )");
-const struct CS_String create_freezers = CS_STRING("CREATE TABLE IF NOT EXISTS freezers ( freezerId TEXT(128), section TEXT(128), upc TEXT(128), num INT, CONSTRAINT PK_freezers PRIMARY KEY (freezerId,section,upc) );");
-const struct CS_String create_user = CS_STRING("CREATE TABLE IF NOT EXISTS users ( userId TEXT(128) PRIMARY KEY, email TEXT(128) );");
+const struct CS_String freezer_sections = CS_STRING("CREATE TABLE IF NOT EXISTS freezer_sections ( freezerId TEXT(128), sectionId TEXT(128), section_name TEXT(128), CONSTRAINT PK_freezer_sections PRIMARY KEY ( freezerId, sectionId );");
+const struct CS_String create_freezers = CS_STRING("CREATE TABLE IF NOT EXISTS freezers ( sectionId TEXT(128), upc TEXT(128), num INT, CONSTRAINT PK_freezers PRIMARY KEY (sectionId,upc) );");
+const struct CS_String create_user = CS_STRING("CREATE TABLE IF NOT EXISTS users ( userId TEXT(128) PRIMARY KEY, email TEXT(128), freezerId TEXT(128), sectionId TEXT(128) );");
 const struct CS_String create_items = CS_STRING("CREATE TABLE IF NOT EXISTS items ( upc TEXT(128) PRIMARY KEY, image BOOLEAN, instructions BOOLEAN, nutrition BOOLEAN );");
 const struct CS_String invited = CS_STRING("CREATE TABLE IF NOT EXISTS invites ( email TEXT(128), freezerId TEXT(128), by TEXT(128), accepted BOOLEAN, acknowledged BOOLEAN, CONSTRAINT PK_invites PRIMARY KEY (email,freezerId) )");
+
+const char *addProductSQL = "INSERT INTO items (upc,image,instructions, nutrition) VALUES (\"%s\",TRUE,FALSE,FALSE);";
+const char *selectAProductSQL = "SELECT image, instructions, nutrition FROM items WHERE upc = \"%s\";";
+const char *addProductInstructionsSQL = "UPDATE items SET instructions VALUES TRUE WHERE upc = \"%s\";";
+const char *addProductNutritionSQL = "UPDATE items SET nutrition VALUES TRUE WHERE upc = \"%s\";";
+const char *addOneToFreezerSectionSQL = "INSERT INTO freezers (freezerId, section, upc, num) VALUES ( \"%s\", \"%s\", \"%s\", 1 ) ON CONFLICT(freezerId,section,upc) UPDATE freezers SET num = num + 1;";
+const char *subOneFromFreezerSectionSQL = "UPDATE freezers SET num = num - 1 WHERE freezerId = \"%s\" AND section = \"%s\" AND upc = \"%s\" AND num > 0;";
+const char *addFreezerSQL = "INSERT INTO freezer_names (freezerId, freezer_name) VALUES (\"%s\",\"%s\")";
+const char *findUserSQL = "SELECT email, freezerId, sectionId FROM users WHERE userId = \"%s\";";
+const char *addUserSQL = "INSERT INTO users (userId,email,freezerId,sectionId) VALUES ( \"%s\", \"%s\", \"%s\", \"%s\");";
+
 
 const struct CS_String *creates[] = {
     &create_user_to_freezer,
     &freezer_names,
+    &freezer_sections,
     &create_freezers,
     &create_user,
     &create_items,
@@ -49,30 +62,52 @@ static const struct CS_String slash = CS_STRING("/");
 static const struct CS_String invalid_chars = CS_STRING(". &;?#");
 static const struct CS_String contentLength = CS_STRING("Content-Length");
 
+struct CS_SqlBackend *freezerBackend = NULL;
+struct CS_SqlSQLITEInitData freezerDbData = { "secrets/freezerDb.mysql" };
+
 struct UserState {
-    struct CS_String128 freezerId;
     struct CS_String128 userId;
+    struct CS_String128 email;
+    struct CS_String128 freezerId;
+    struct CS_String128 currentSection;
     bool admin;
 };
 
-struct UserState *CreateUserState(const char *googleId) {
+struct UserState *CreateUserState(const char *googleId, const char *email) {
+    const struct CS_String *query = CS_stringTempSnprintf(2048, findUserSQL, googleId);
+    const struct CS_SqlResponse *response = CS_sqlQuery( freezerBackend, query );
+    if( response == NULL || response->numRows == 0 ) {
+        CS_sqlReturnResponse(response);
+        query = CS_stringTempSnprintf(2048,addUserSQL, googleId, email, "", "");
+        response = CS_sqlQuery( freezerBackend, query );
+        if( response == NULL )
+            return NULL;
+        CS_sqlReturnResponse(response);
+        response = NULL;
+    }
     struct UserState *userState = CS_allocZero(sizeof(struct UserState));
     CS_stringCopyCstringToStatic( (struct CS_String*)&userState->userId, 128, googleId, -1 );
+    CS_stringCopyCstringToStatic( (struct CS_String*)&userState->email, 128, email, -1 );
+    if( response != NULL ) {
+        //user and section.
+        CS_stringCopyToStatic( (struct CS_String*)&userState->freezerId, response->rows->values[1].stringValue, 128 );
+        CS_stringCopyToStatic( (struct CS_String*)&userState->currentSection, response->rows->values[2].stringValue, 128 );
+    } else {
+        CS_stringCopyCstringToStatic( (struct CS_String*)&userState->freezerId, 128, NULL, 0 );
+        CS_stringCopyCstringToStatic( (struct CS_String*)&userState->currentSection, 128, NULL, 0 );
+    }
     return userState;
 }
 
 #define SESSION_COOKIE_NAME &CS_STRING("freezer_session")
 const struct CS_String googleLoginUri = CS_STRING("/freezer/googlelogin");
 
-static const struct CS_Storage *longTermStorage = NULL;
 static struct CS_HashTable *cheapSessions = NULL;
 static struct CS_HashTable *googleIdToSessionId = NULL;
 
 static const char *sessionThatIsAdmin = NULL;
 static const char *adminEmail = NULL;
 
-struct CS_SqlBackend *freezerBackend = NULL;
-struct CS_SqlSQLITEInitData freezerDbData = { "secrets/freezerDb.mysql" };
 
 bool startupFreezer( const char *inputAdminEmail ) {
     if( inputAdminEmail == NULL ) return true;
@@ -192,6 +227,7 @@ bool cookieFilter( struct CS_ClientInfo *info ) {
     if( cookieValue != NULL ) {
         const void *currentSession = CS_hashtableGet( cheapSessions, CS_stringTempCstring(cookieValue) );
         if( currentSession != CS_HASHTABLE_ERROR && currentSession != NULL ) {
+            info->persistentData = (void*)currentSession;
             return false;
         }
     }
@@ -247,26 +283,8 @@ bool googleLogin( struct CS_ClientInfo *info ) {
 
     if( sessionId == CS_HASHTABLE_ERROR ) {
         sessionId = CS_uuid4CstringTemp();
-        struct UserState *user = CreateUserState( googleId );
+        struct UserState *user = CreateUserState( googleId, email->stringValue );
         user->admin = isAdmin;
-        const struct CS_String *queryForFreezer = CS_stringTempSnprintf( 2048, "SELECT freezerId FROM user_to_freezer WHERE userid = \"%s\";", googleId );
-        const struct CS_SqlResponse *response = CS_sqlQuery( freezerBackend, queryForFreezer );
-
-        if( !response || response->numRows == 0 ) {
-            //Create a new freezer.
-            CS_sqlReturnResponse(response);
-            const char *freezerId = CS_uuid4CstringTemp();
-            const struct CS_String *queryToAdd = CS_stringTempSnprintf( 2048, "INSERT INTO user_to_freezer (userId, freezerId) VALUES (\"%s\",\"%s\");", googleId, freezerId );
-            response = CS_sqlQuery( freezerBackend, queryToAdd );
-            if( response == NULL ) {
-                return loginPageReturn(info);
-            }
-            CS_stringCopyCstringToStatic( (struct CS_String*)&user->freezerId, 128, freezerId, -1 );
-            CS_sqlReturnResponse(response);
-        } else {
-            CS_stringCopyToStatic( (struct CS_String*)&user->freezerId, response->rows->values->stringValue, 128 );
-            CS_sqlReturnResponse(response);
-        }
         CS_hashtablePut( googleIdToSessionId, googleId, sessionId );
         CS_hashtablePut( cheapSessions, sessionId, user );
     }
@@ -375,6 +393,7 @@ bool removeItem( struct CS_ClientInfo *info ) {
 }
 bool addSection( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
+    struct UserState *userState = (struct UserState *)info->persistentData;
     return CS_serverDoReply(info, reply);
 }
 bool removeSection( struct CS_ClientInfo *info ) {
@@ -406,6 +425,15 @@ bool allowRemoveEmail( struct CS_ClientInfo *info ) {
     return CS_serverDoReply(info, reply);
 }
 bool allowBanEmail( struct CS_ClientInfo *info ) {
+    struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
+    return CS_serverDoReply(info, reply);
+}
+bool listSection( struct CS_ClientInfo *info ) {
+    struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
+    struct UserState *userState = (struct UserState *)info->persistentData;
+    return CS_serverDoReply(info, reply);
+}
+bool listFreezer( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
     return CS_serverDoReply(info, reply);
 }

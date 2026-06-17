@@ -180,6 +180,15 @@ let retries = 2; while (retries > 0) { try {
     } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
 } }
 ,
+"api_section_list": function api_section_list(thing) {
+let retries = 2; while (retries > 0) { try {
+    if( thing === undefined ) {
+        fetch( "/freezer/api/section/list",{credentials:"same-origin",method:"GET"} ).then( response => { DaBus.post("api_section_list", response ); } );
+    } else {
+        fetch( "/freezer/api/section/list",{credentials:"same-origin",method:"GET",body:thing} ).then( response => { DaBus.post("api_section_list", response); } );
+    } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
+} }
+,
 "api_section_remove": function api_section_remove(what,thing) {
 let retries = 2; while (retries > 0) { try {
     if( thing === undefined ) {
@@ -195,6 +204,15 @@ let retries = 2; while (retries > 0) { try {
         fetch( "/freezer/api/section/switch/" + what,{credentials:"same-origin",method:"POST"} ).then( DaBus.post("api_section_switch", response) );
     } else {
         fetch( "/freezer/api/section/switch/" + what,{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_section_switch", response); } );
+    } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
+} }
+,
+"api_freezer_list": function api_freezer_list(what,thing) {
+let retries = 2; while (retries > 0) { try {
+    if( thing === undefined ) {
+        fetch( "/freezer/api/freezer/list/" + what,{credentials:"same-origin",method:"GET"} ).then( DaBus.post("api_freezer_list", response) );
+    } else {
+        fetch( "/freezer/api/freezer/list/" + what,{credentials:"same-origin",method:"GET",body:thing} ).then( response => { DaBus.post("api_freezer_list", response); } );
     } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
 } }
 ,
