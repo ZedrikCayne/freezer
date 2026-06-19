@@ -90,39 +90,39 @@ let retries = 2; while (retries > 0) { try {
     } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
 } }
 ,
-"api_message_get": function api_message_get(what,thing) {
+"api_message_get": function api_message_get(thing) {
 let retries = 2; while (retries > 0) { try {
     if( thing === undefined ) {
-        fetch( "/freezer/api/message/get/" + what,{credentials:"same-origin",method:"GET"} ).then( DaBus.post("api_message_get", response) );
+        fetch( "/freezer/api/message/get",{credentials:"same-origin",method:"GET"} ).then( response => { DaBus.post("api_message_get", response ); } );
     } else {
-        fetch( "/freezer/api/message/get/" + what,{credentials:"same-origin",method:"GET",body:thing} ).then( response => { DaBus.post("api_message_get", response); } );
+        fetch( "/freezer/api/message/get",{credentials:"same-origin",method:"GET",body:thing} ).then( response => { DaBus.post("api_message_get", response); } );
     } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
 } }
 ,
-"api_message_delete": function api_message_delete(what,thing) {
+"api_message_delete": function api_message_delete(thing) {
 let retries = 2; while (retries > 0) { try {
     if( thing === undefined ) {
-        fetch( "/freezer/api/message/delete/" + what,{credentials:"same-origin",method:"DELETE"} ).then( DaBus.post("api_message_delete", response) );
+        fetch( "/freezer/api/message/delete",{credentials:"same-origin",method:"DELETE"} ).then( response => { DaBus.post("api_message_delete", response ); } );
     } else {
-        fetch( "/freezer/api/message/delete/" + what,{credentials:"same-origin",method:"DELETE",body:thing} ).then( response => { DaBus.post("api_message_delete", response); } );
+        fetch( "/freezer/api/message/delete",{credentials:"same-origin",method:"DELETE",body:thing} ).then( response => { DaBus.post("api_message_delete", response); } );
     } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
 } }
 ,
-"api_message_accept": function api_message_accept(what,thing) {
+"api_message_accept": function api_message_accept(thing) {
 let retries = 2; while (retries > 0) { try {
     if( thing === undefined ) {
-        fetch( "/freezer/api/message/accept/" + what,{credentials:"same-origin",method:"POST"} ).then( DaBus.post("api_message_accept", response) );
+        fetch( "/freezer/api/message/accept",{credentials:"same-origin",method:"POST"} ).then( response => { DaBus.post("api_message_accept", response ); } );
     } else {
-        fetch( "/freezer/api/message/accept/" + what,{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_message_accept", response); } );
+        fetch( "/freezer/api/message/accept",{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_message_accept", response); } );
     } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
 } }
 ,
-"api_message_send": function api_message_send(what,thing) {
+"api_message_send": function api_message_send(thing) {
 let retries = 2; while (retries > 0) { try {
     if( thing === undefined ) {
-        fetch( "/freezer/api/message/send/" + what,{credentials:"same-origin",method:"POST"} ).then( DaBus.post("api_message_send", response) );
+        fetch( "/freezer/api/message/send",{credentials:"same-origin",method:"POST"} ).then( response => { DaBus.post("api_message_send", response ); } );
     } else {
-        fetch( "/freezer/api/message/send/" + what,{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_message_send", response); } );
+        fetch( "/freezer/api/message/send",{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_message_send", response); } );
     } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
 } }
 ,
@@ -135,21 +135,21 @@ let retries = 2; while (retries > 0) { try {
     } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
 } }
 ,
-"api_family_invite": function api_family_invite(what,thing) {
+"api_family_invite": function api_family_invite(thing) {
 let retries = 2; while (retries > 0) { try {
     if( thing === undefined ) {
-        fetch( "/freezer/api/family/invite/" + what,{credentials:"same-origin",method:"POST"} ).then( DaBus.post("api_family_invite", response) );
+        fetch( "/freezer/api/family/invite",{credentials:"same-origin",method:"POST"} ).then( response => { DaBus.post("api_family_invite", response ); } );
     } else {
-        fetch( "/freezer/api/family/invite/" + what,{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_family_invite", response); } );
+        fetch( "/freezer/api/family/invite",{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_family_invite", response); } );
     } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
 } }
 ,
-"api_family_remove": function api_family_remove(what,thing) {
+"api_family_remove": function api_family_remove(thing) {
 let retries = 2; while (retries > 0) { try {
     if( thing === undefined ) {
-        fetch( "/freezer/api/family/remove/" + what,{credentials:"same-origin",method:"POST"} ).then( DaBus.post("api_family_remove", response) );
+        fetch( "/freezer/api/family/remove",{credentials:"same-origin",method:"POST"} ).then( response => { DaBus.post("api_family_remove", response ); } );
     } else {
-        fetch( "/freezer/api/family/remove/" + what,{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_family_remove", response); } );
+        fetch( "/freezer/api/family/remove",{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_family_remove", response); } );
     } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
 } }
 ,
@@ -171,12 +171,12 @@ let retries = 2; while (retries > 0) { try {
     } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
 } }
 ,
-"api_section_add": function api_section_add(what,thing) {
+"api_section_add": function api_section_add(thing) {
 let retries = 2; while (retries > 0) { try {
     if( thing === undefined ) {
-        fetch( "/freezer/api/section/add/" + what,{credentials:"same-origin",method:"POST"} ).then( DaBus.post("api_section_add", response) );
+        fetch( "/freezer/api/section/add",{credentials:"same-origin",method:"POST"} ).then( response => { DaBus.post("api_section_add", response ); } );
     } else {
-        fetch( "/freezer/api/section/add/" + what,{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_section_add", response); } );
+        fetch( "/freezer/api/section/add",{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_section_add", response); } );
     } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
 } }
 ,
@@ -189,57 +189,75 @@ let retries = 2; while (retries > 0) { try {
     } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
 } }
 ,
-"api_section_remove": function api_section_remove(what,thing) {
+"api_section_remove": function api_section_remove(thing) {
 let retries = 2; while (retries > 0) { try {
     if( thing === undefined ) {
-        fetch( "/freezer/api/section/remove/" + what,{credentials:"same-origin",method:"POST"} ).then( DaBus.post("api_section_remove", response) );
+        fetch( "/freezer/api/section/remove",{credentials:"same-origin",method:"POST"} ).then( response => { DaBus.post("api_section_remove", response ); } );
     } else {
-        fetch( "/freezer/api/section/remove/" + what,{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_section_remove", response); } );
+        fetch( "/freezer/api/section/remove",{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_section_remove", response); } );
     } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
 } }
 ,
-"api_section_switch": function api_section_switch(what,thing) {
+"api_section_switch": function api_section_switch(thing) {
 let retries = 2; while (retries > 0) { try {
     if( thing === undefined ) {
-        fetch( "/freezer/api/section/switch/" + what,{credentials:"same-origin",method:"POST"} ).then( DaBus.post("api_section_switch", response) );
+        fetch( "/freezer/api/section/switch",{credentials:"same-origin",method:"POST"} ).then( response => { DaBus.post("api_section_switch", response ); } );
     } else {
-        fetch( "/freezer/api/section/switch/" + what,{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_section_switch", response); } );
+        fetch( "/freezer/api/section/switch",{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_section_switch", response); } );
     } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
 } }
 ,
-"api_freezer_list": function api_freezer_list(what,thing) {
+"api_section_rename": function api_section_rename(thing) {
 let retries = 2; while (retries > 0) { try {
     if( thing === undefined ) {
-        fetch( "/freezer/api/freezer/list/" + what,{credentials:"same-origin",method:"GET"} ).then( DaBus.post("api_freezer_list", response) );
+        fetch( "/freezer/api/section/rename",{credentials:"same-origin",method:"POST"} ).then( response => { DaBus.post("api_section_rename", response ); } );
     } else {
-        fetch( "/freezer/api/freezer/list/" + what,{credentials:"same-origin",method:"GET",body:thing} ).then( response => { DaBus.post("api_freezer_list", response); } );
+        fetch( "/freezer/api/section/rename",{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_section_rename", response); } );
     } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
 } }
 ,
-"api_freezer_switch": function api_freezer_switch(what,thing) {
+"api_freezer_list": function api_freezer_list(thing) {
 let retries = 2; while (retries > 0) { try {
     if( thing === undefined ) {
-        fetch( "/freezer/api/freezer/switch/" + what,{credentials:"same-origin",method:"POST"} ).then( DaBus.post("api_freezer_switch", response) );
+        fetch( "/freezer/api/freezer/list",{credentials:"same-origin",method:"GET"} ).then( response => { DaBus.post("api_freezer_list", response ); } );
     } else {
-        fetch( "/freezer/api/freezer/switch/" + what,{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_freezer_switch", response); } );
+        fetch( "/freezer/api/freezer/list",{credentials:"same-origin",method:"GET",body:thing} ).then( response => { DaBus.post("api_freezer_list", response); } );
     } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
 } }
 ,
-"api_freezer_remove": function api_freezer_remove(what,thing) {
+"api_freezer_switch": function api_freezer_switch(thing) {
 let retries = 2; while (retries > 0) { try {
     if( thing === undefined ) {
-        fetch( "/freezer/api/freezer/remove/" + what,{credentials:"same-origin",method:"POST"} ).then( DaBus.post("api_freezer_remove", response) );
+        fetch( "/freezer/api/freezer/switch",{credentials:"same-origin",method:"POST"} ).then( response => { DaBus.post("api_freezer_switch", response ); } );
     } else {
-        fetch( "/freezer/api/freezer/remove/" + what,{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_freezer_remove", response); } );
+        fetch( "/freezer/api/freezer/switch",{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_freezer_switch", response); } );
     } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
 } }
 ,
-"api_freezer_add": function api_freezer_add(what,thing) {
+"api_freezer_remove": function api_freezer_remove(thing) {
 let retries = 2; while (retries > 0) { try {
     if( thing === undefined ) {
-        fetch( "/freezer/api/freezer/add/" + what,{credentials:"same-origin",method:"POST"} ).then( DaBus.post("api_freezer_add", response) );
+        fetch( "/freezer/api/freezer/remove",{credentials:"same-origin",method:"POST"} ).then( response => { DaBus.post("api_freezer_remove", response ); } );
     } else {
-        fetch( "/freezer/api/freezer/add/" + what,{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_freezer_add", response); } );
+        fetch( "/freezer/api/freezer/remove",{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_freezer_remove", response); } );
+    } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
+} }
+,
+"api_freezer_add": function api_freezer_add(thing) {
+let retries = 2; while (retries > 0) { try {
+    if( thing === undefined ) {
+        fetch( "/freezer/api/freezer/add",{credentials:"same-origin",method:"POST"} ).then( response => { DaBus.post("api_freezer_add", response ); } );
+    } else {
+        fetch( "/freezer/api/freezer/add",{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_freezer_add", response); } );
+    } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
+} }
+,
+"api_freezer_rename": function api_freezer_rename(thing) {
+let retries = 2; while (retries > 0) { try {
+    if( thing === undefined ) {
+        fetch( "/freezer/api/freezer/rename",{credentials:"same-origin",method:"POST"} ).then( response => { DaBus.post("api_freezer_rename", response ); } );
+    } else {
+        fetch( "/freezer/api/freezer/rename",{credentials:"same-origin",method:"POST",body:thing} ).then( response => { DaBus.post("api_freezer_rename", response); } );
     } } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
 } }
 ,

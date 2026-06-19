@@ -4,5 +4,5 @@ CREATE TABLE IF NOT EXISTS freezer_sections ( freezerId TEXT(128), sectionId TEX
 CREATE TABLE IF NOT EXISTS freezers ( sectionId TEXT(128), upc TEXT(128), num INT, CONSTRAINT PK_freezers PRIMARY KEY (sectionId,upc) );
 CREATE TABLE IF NOT EXISTS users ( userId TEXT(128) PRIMARY KEY, email TEXT(128), freezerId TEXT(128), sectionId TEXT(128) );
 CREATE TABLE IF NOT EXISTS items ( upc TEXT(128) PRIMARY KEY, image BOOLEAN, instructions BOOLEAN, nutrition BOOLEAN );
-CREATE TABLE IF NOT EXISTS invites ( email T  EXT(128), freezerId TEXT(128), by TEXT(128), accepted BOOLEAN, acknowledged BOOLEAN, CON  STRAINT PK_invites PRIMARY KEY (email,freezerId) );
+CREATE TABLE IF NOT EXISTS invites ( email TEXT(128), freezerId TEXT(128), by TEXT(128), accepted BOOLEAN, acknowledged BOOLEAN, CON  STRAINT PK_invites PRIMARY KEY (email,freezerId) );
 

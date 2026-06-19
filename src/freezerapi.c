@@ -28,10 +28,12 @@ const struct CS_String api_section_add_uri = CS_STRING("/freezer/api/section/add
 const struct CS_String api_section_list_uri = CS_STRING("/freezer/api/section/list");
 const struct CS_String api_section_remove_uri = CS_STRING("/freezer/api/section/remove");
 const struct CS_String api_section_switch_uri = CS_STRING("/freezer/api/section/switch");
+const struct CS_String api_section_rename_uri = CS_STRING("/freezer/api/section/rename");
 const struct CS_String api_freezer_list_uri = CS_STRING("/freezer/api/freezer/list");
 const struct CS_String api_freezer_switch_uri = CS_STRING("/freezer/api/freezer/switch");
 const struct CS_String api_freezer_remove_uri = CS_STRING("/freezer/api/freezer/remove");
 const struct CS_String api_freezer_add_uri = CS_STRING("/freezer/api/freezer/add");
+const struct CS_String api_freezer_rename_uri = CS_STRING("/freezer/api/freezer/rename");
 const struct CS_String api_allow_add_uri = CS_STRING("/freezer/api/allow/add");
 const struct CS_String api_allow_remove_uri = CS_STRING("/freezer/api/allow/remove");
 const struct CS_String api_allow_ban_uri = CS_STRING("/freezer/api/allow/ban");
@@ -49,27 +51,29 @@ struct CS_Route freezerRoutes[] = {
 { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_product_deletenutrition_uri, deleteImage, "nutrition" },
 { CS_HTTP_METHOD_GET, CS_ROUTE_TYPE_PREFIX, &api_product_get_uri, getProduct, NULL },
 { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_product_delete_uri, deleteProduct, NULL },
-{ CS_HTTP_METHOD_GET, CS_ROUTE_TYPE_PREFIX, &api_message_get_uri, getMessages, NULL },
-{ CS_HTTP_METHOD_DELETE, CS_ROUTE_TYPE_PREFIX, &api_message_delete_uri, deleteMessage, NULL },
-{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_message_accept_uri, acceptMessage, NULL },
-{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_message_send_uri, sendMessage, NULL },
+{ CS_HTTP_METHOD_GET, CS_ROUTE_TYPE_EXACT, &api_message_get_uri, getMessages, NULL },
+{ CS_HTTP_METHOD_DELETE, CS_ROUTE_TYPE_EXACT, &api_message_delete_uri, deleteMessage, NULL },
+{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &api_message_accept_uri, acceptMessage, NULL },
+{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &api_message_send_uri, sendMessage, NULL },
 { CS_HTTP_METHOD_GET, CS_ROUTE_TYPE_PREFIX, &api_family_get_uri, getFamily, NULL },
-{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_family_invite_uri, inviteFamilyMember, NULL },
-{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_family_remove_uri, removeFamilyMember, NULL },
+{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &api_family_invite_uri, inviteFamilyMember, NULL },
+{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &api_family_remove_uri, removeFamilyMember, NULL },
 { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_item_add_uri, addItem, NULL },
 { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_item_remove_uri, removeItem, NULL },
-{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_section_add_uri, addSection, NULL },
+{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &api_section_add_uri, addSection, NULL },
 { CS_HTTP_METHOD_GET, CS_ROUTE_TYPE_EXACT, &api_section_list_uri, listSection, NULL },
-{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_section_remove_uri, removeSection, NULL },
-{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_section_switch_uri, switchSection, NULL },
-{ CS_HTTP_METHOD_GET, CS_ROUTE_TYPE_PREFIX, &api_freezer_list_uri, listFreezer, NULL },
-{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_freezer_switch_uri, switchFreezer, NULL },
-{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_freezer_remove_uri, removeFreezer, NULL },
-{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_PREFIX, &api_freezer_add_uri, addFreezer, NULL },
+{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &api_section_remove_uri, removeSection, NULL },
+{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &api_section_switch_uri, switchSection, NULL },
+{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &api_section_rename_uri, renameSection, NULL },
+{ CS_HTTP_METHOD_GET, CS_ROUTE_TYPE_EXACT, &api_freezer_list_uri, listFreezer, NULL },
+{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &api_freezer_switch_uri, switchFreezer, NULL },
+{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &api_freezer_remove_uri, removeFreezer, NULL },
+{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &api_freezer_add_uri, addFreezer, NULL },
+{ CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &api_freezer_rename_uri, renameFreezer, NULL },
 { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &api_allow_add_uri, allowAddEmail, NULL },
 { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &api_allow_remove_uri, allowRemoveEmail, NULL },
 { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &api_allow_ban_uri, allowBanEmail, NULL },
-{ CS_HTTP_METHOD_GET, CS_ROUTE_TYPE_WILDCARD, NULL, CS_serverFileServer, NULL },
-{ CS_HTTP_METHOD_HEAD, CS_ROUTE_TYPE_WILDCARD, NULL, CS_serverFileServer, NULL },
+{ CS_HTTP_METHOD_GET, CS_ROUTE_TYPE_WILDCARD, NULL, serveFile, NULL },
+{ CS_HTTP_METHOD_HEAD, CS_ROUTE_TYPE_WILDCARD, NULL, serveFile, NULL },
 };
 int32_t numFreezerRoutes(void){ return CS_ARRAY_SIZE(freezerRoutes); }

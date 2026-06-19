@@ -46,3 +46,6 @@ bool CS_serverFileServer( struct CS_ClientInfo *info );
 bool listSection( struct CS_ClientInfo *info );
 bool listFreezer( struct CS_ClientInfo *info );
 bool CS_serverFileServer( struct CS_ClientInfo *info );
+bool serveFile( struct CS_ClientInfo *info );
+bool renameFreezer( struct CS_ClientInfo *info );
+bool renameSection( struct CS_ClientInfo *info );
