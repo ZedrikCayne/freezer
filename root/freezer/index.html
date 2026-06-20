@@ -238,7 +238,7 @@
                 offscreenCanvas.height = video.videoHeight;
                 offscreenCtx.drawImage(video, 0, 0, offscreenCanvas.width, offscreenCanvas.height);
 
-                const scale = Math.min(1024 / offscreenCanvas.width, 1024 / offscreenCanvas.height, 1);
+                const scale = Math.min(512 / offscreenCanvas.width, 512 / offscreenCanvas.height, 1);
                 cropCanvas.width = offscreenCanvas.width * scale;
                 cropCanvas.height = offscreenCanvas.height * scale;
                 
@@ -346,7 +346,9 @@
             const arrayBuffer = await blob.arrayBuffer();
             const uint8Array = new Uint8Array(arrayBuffer);
 
-            ServerApi.api_product_putimage( currentUPC, blob );
+            if( currentUPC !== null ) {
+                ServerApi.api_product_putimage( currentUPC, blob );
+            }
             
             resetUI();
             resetButtons();
