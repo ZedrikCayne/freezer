@@ -31,6 +31,20 @@
 
 #include "freezer.h"
 
+struct UserState {
+    struct CS_String *userId;
+    struct CS_String *email;
+    struct CS_String *freezerId;
+    struct CS_String *currentSection;
+    bool admin;
+    struct CS_String128 _userId;
+    struct CS_String128 _email;
+    struct CS_String128 _freezerId;
+    struct CS_String128 _currentSection;
+};
+
+
+
 struct CS_SqlBackend *freezerBackend = NULL;
 static struct CS_SqlSQLITEInitData freezerDbData = { "secrets/freezerDb.mysql" };
 
@@ -90,6 +104,14 @@ static bool addProductImage(const struct CS_String *upc) {
     return returnValue;
 }
 static const char *selectAProductSQL = "SELECT image, instructions, nutrition FROM items WHERE upc = \"%s\";";
+static bool productExists( const struct CS_String *upc ) {
+    bool returnValue;
+    const struct CS_String *sql = CS_stringTempSnprintf(2048, selectAProductSQL, upc);
+    const struct CS_SqlResponse *response = CS_sqlQuery( freezerBackend, sql );
+    returnValue = (response == NULL || response->numRows < 1);
+    CS_sqlReturnResponse( response );
+    return returnValue;
+}
 static const char *selectAProduct( const struct CS_String *upc ) {
     const char *returnValue = NULL;
     const struct CS_String *sql = CS_stringTempSnprintf(2048, selectAProductSQL, upc);
@@ -132,7 +154,7 @@ static bool addProductNutrition( const struct CS_String *upc ) {
     CS_sqlReturnResponse( response );
     return returnValue;
 }
-static const char *addOneToFreezerSectionSQL = "INSERT INTO freezers (sectionId, upc, num) VALUES ( \"%s\", \"%s\", 1 ) ON CONFLICT DO UPDATE freezers SET num = num + 1;";
+static const char *addOneToFreezerSectionSQL = "INSERT INTO freezers (sectionId, upc, num) VALUES ( \"%s\", \"%s\", 1 ) ON CONFLICT DO UPDATE SET num = num + 1;";
 static bool addOneToFreezerSection( const struct CS_String *sectionId, const struct CS_String *upc ) {
     const struct CS_String *sql = CS_stringTempSnprintf(2048, addOneToFreezerSectionSQL,
             CS_stringTempCstring(sectionId),CS_stringTempCstring(upc) );
@@ -184,6 +206,26 @@ static bool userAdminOnFreezer( const struct CS_String *userId,
     if( response ) CS_sqlReturnResponse(response);
 
     return returnValue;
+}
+static bool userHasAccessToFreezer( const struct CS_String *userId,
+                                    const struct CS_String *freezerId ) {
+    bool returnValue = false;
+    const struct CS_String *sql = CS_stringTempSnprintf(2048, userAdminOnFreezerSQL,
+            CS_stringTempCstring(userId), CS_stringTempCstring(freezerId) );
+    const struct CS_SqlResponse *response = CS_sqlQuery( freezerBackend, sql );
+    returnValue = ( response && response->numRows == 1 );
+    if( response ) CS_sqlReturnResponse(response);
+
+    return returnValue;
+}
+static bool hasAdminToFreezer( const struct CS_ClientInfo *info ) {
+    struct UserState *userState = (struct UserState *)info->persistentData;
+    return userAdminOnFreezer( userState->userId, userState->freezerId );
+}
+static bool hasAccessToFreezer( const struct CS_ClientInfo *info ) {
+    struct UserState *userState = (struct UserState *)info->persistentData;
+    return userHasAccessToFreezer( userState->userId, userState->freezerId );
+
 }
 static const char *findUserSQL = "SELECT email, freezerId, sectionId FROM users WHERE userId = \"%s\";";
 static const char *addUserSQL = "INSERT INTO users (userId,email,freezerId,sectionId) VALUES ( \"%s\", \"%s\", \"%s\", \"%s\");";
@@ -248,14 +290,6 @@ const struct CS_String *creates[] = {
     &invited
 };
 
-struct UserState {
-    struct CS_String128 userId;
-    struct CS_String128 email;
-    struct CS_String128 freezerId;
-    struct CS_String128 currentSection;
-    bool admin;
-};
-
 struct UserState *CreateUserState(const char *googleId, const char *email) {
     const struct CS_String *query = CS_stringTempSnprintf(2048, findUserSQL, googleId);
     const struct CS_SqlResponse *response = CS_sqlQuery( freezerBackend, query );
@@ -264,33 +298,44 @@ struct UserState *CreateUserState(const char *googleId, const char *email) {
     struct UserState *userState = CS_allocZero(sizeof(struct UserState));
     if( userState == NULL ) return NULL;
 
-    CS_stringCopyCstringToStatic( (struct CS_String*)&userState->userId, 128, googleId, -1 );
-    CS_stringCopyCstringToStatic( (struct CS_String*)&userState->email, 128, email, -1 );
+    CS_stringCopyCstringToStatic( (struct CS_String*)&userState->_userId, 128, googleId, -1 );
+    CS_stringCopyCstringToStatic( (struct CS_String*)&userState->_email, 128, email, -1 );
     if( response == NULL || response->numRows == 0 ) {
+        int retries = 6;
         if( response ) CS_sqlReturnResponse(response);
         response = NULL;
         const char *defaultFreezerName;
         defaultFreezerName = CS_tempBuffSnprintf(128,"%s freezer",email);
         do {
             freezerUUID = CS_uuid4CstringTemp();
-        } while( addFreezerName(freezerUUID, defaultFreezerName) );
+        } while( --retries>0 && addFreezerName(freezerUUID, defaultFreezerName) );
+        if( retries <= 0 ) {
+            CS_free(userState);
+            return NULL;
+        }
+        CS_stringCopyCstringToStatic( (struct CS_String*)&userState->_freezerId, 128, freezerUUID, -1 );
         do {
             sectionUUID = CS_uuid4CstringTemp();
-        } while ( addFreezerSection(freezerUUID, sectionUUID, "Default") );
+        } while ( --retries>0 && addFreezerSection(freezerUUID, sectionUUID, "Default") );
+        if( retries <= 0 ) {
+            CS_free(userState);
+            return NULL;
+        }
+        CS_stringCopyCstringToStatic( (struct CS_String*)&userState->_currentSection, 128, sectionUUID, -1 );
         
         if( addUser(googleId,email,freezerUUID,sectionUUID) ) {
             CS_free(userState);
             return NULL;
         }
-        CS_stringCopyCstringToStatic( (struct CS_String*)&userState->freezerId, 128, freezerUUID, -1 );
-        CS_stringCopyCstringToStatic( (struct CS_String*)&userState->currentSection, 128, sectionUUID, -1 );
-
-        response = NULL;
     } else {
-        CS_stringCopyToStatic( (struct CS_String*)&userState->freezerId, response->rows->values[1].stringValue, 128 );
-        CS_stringCopyToStatic( (struct CS_String*)&userState->currentSection, response->rows->values[2].stringValue, 128 );
+        CS_stringCopyToStatic( (struct CS_String*)&userState->_freezerId, response->rows->values[1].stringValue, 128 );
+        CS_stringCopyToStatic( (struct CS_String*)&userState->_currentSection, response->rows->values[2].stringValue, 128 );
         CS_sqlReturnResponse(response);
     }
+    userState->freezerId = (struct CS_String*)&userState->_freezerId;
+    userState->currentSection = (struct CS_String*)&userState->_currentSection;
+    userState->email = (struct CS_String*)&userState->_email;
+    userState->userId = (struct CS_String*)&userState->_userId;
     return userState;
 }
 
@@ -302,7 +347,6 @@ static struct CS_HashTable *googleIdToSessionId = NULL;
 
 static const char *sessionThatIsAdmin = NULL;
 static const char *adminEmail = NULL;
-
 
 bool startupFreezer( const char *inputAdminEmail ) {
     if( inputAdminEmail == NULL ) return true;
@@ -332,10 +376,6 @@ bool stopFreezer() {
     if( cheapSessions ) CS_hashtableFree( cheapSessions );
     cheapSessions = NULL;
 
-    return false;
-}
-
-bool createFreezerForUser( const struct CS_String *userId, const char *freezerUuid, const char *freezerName ) {
     return false;
 }
 
@@ -496,10 +536,6 @@ bool googleLogin( struct CS_ClientInfo *info ) {
     return loginAndReturnIndex(info, sessionId);
 }
 
-bool killFreezer() {
-    return false;
-}
-
 bool uploadImage( struct CS_ClientInfo *info ) {
     const struct CS_String *length = CS_serverGetRequestHeader( info, &contentLength );
     if( !length ) {
@@ -553,105 +589,172 @@ bool uploadImage( struct CS_ClientInfo *info ) {
     }
 
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    CS_serverDoReply(info, reply);
+    return true;
 }
 
 bool deleteImage( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    CS_serverDoReply(info, reply);
+    return true;
 }
 bool getProduct( struct CS_ClientInfo *info ) {
-    struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    const struct CS_String *upc = upcFromClientInfo(info);
+    
+    const char *selectedProduct = selectAProduct(upc);
+    if( selectedProduct == NULL ) {
+        struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_404, CS_MIME_DO_NOT_SET, NULL, 0);
+        CS_serverDoReply(info, reply);
+        return true;
+    }
+    struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_JSON, selectedProduct, strlen(selectedProduct));
+    CS_serverDoReply(info, reply);
+    return true;
 }
 bool deleteProduct( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    CS_serverDoReply(info, reply);
+    return true;
 }
 bool getMessages( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    CS_serverDoReply(info, reply);
+    return true;
 }
 bool deleteMessage( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    CS_serverDoReply(info, reply);
+    return true;
 }
 bool acceptMessage( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    CS_serverDoReply(info, reply);
+    return true;
 }
 bool sendMessage( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    CS_serverDoReply(info, reply);
+    return true;
 }
 bool getFamily( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    CS_serverDoReply(info, reply);
+    return true;
 }
 bool inviteFamilyMember( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    CS_serverDoReply(info, reply);
+    return true;
 }
 bool removeFamilyMember( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    CS_serverDoReply(info, reply);
+    return true;
+}
+bool itemOperationOnFreezerDoesRepliesOnError( struct CS_ClientInfo *info, const struct CS_String *upc ) {
+    struct CS_Reply *reply;
+    if( upc == NULL ) {
+        reply = CS_serverCreateReply(info, CS_RESPONSE_500, CS_MIME_DO_NOT_SET, NULL, 0);
+        CS_serverDoReply(info, reply);
+        return true;
+    }
+    if( !productExists( upc ) ) {
+        reply = CS_serverCreateReply(info, CS_RESPONSE_404, CS_MIME_DO_NOT_SET, NULL, 0);
+        CS_serverDoReply(info, reply);
+        return true;
+    }
+    if( !hasAccessToFreezer(info) ) {
+        reply = CS_serverCreateReply(info, CS_RESPONSE_401, CS_MIME_DO_NOT_SET, NULL, 0);
+        CS_serverDoReply(info, reply);
+        return true;
+    }
+    return false;
 }
 bool addItem( struct CS_ClientInfo *info ) {
-    struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    struct UserState *userState = (struct UserState *)info->appData;
+    const struct CS_String *upc = upcFromClientInfo(info);
+    if( itemOperationOnFreezerDoesRepliesOnError( info, upc ) ) return true;
+    struct CS_Reply *reply = NULL;
+    if( addOneToFreezerSection(userState->currentSection, upc) ) {
+        reply = CS_serverCreateReply(info, CS_RESPONSE_500, CS_MIME_DO_NOT_SET, NULL, 0);
+        return true;
+    }
+    reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
+    CS_serverDoReply(info, reply);
+    return true;
 }
 bool removeItem( struct CS_ClientInfo *info ) {
+    struct UserState *userState = (struct UserState *)info->appData;
+    const struct CS_String *upc = upcFromClientInfo(info);
+    if( itemOperationOnFreezerDoesRepliesOnError( info, upc ) ) return true;
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    if( subOneFromFreezerSection(userState->currentSection, upc) ) {
+        reply = CS_serverCreateReply(info, CS_RESPONSE_500, CS_MIME_DO_NOT_SET, NULL, 0);
+        return true;
+    }
+    CS_serverDoReply(info, reply);
+    return true;
 }
 bool addSection( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
     struct UserState *userState = (struct UserState *)info->persistentData;
-    return CS_serverDoReply(info, reply);
+    CS_serverDoReply(info, reply);
+    return true;
 }
 bool removeSection( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    CS_serverDoReply(info, reply);
+    return true;
 }
 bool switchSection( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    CS_serverDoReply(info, reply);
+    return true;
 }
 bool switchFreezer( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    CS_serverDoReply(info, reply);
+    return true;
 }
 bool removeFreezer( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    CS_serverDoReply(info, reply);
+    return true;
 }
 bool addFreezer( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    CS_serverDoReply(info, reply);
+    return true;
 }
 bool allowAddEmail( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    CS_serverDoReply(info, reply);
+    return true;
 }
 bool allowRemoveEmail( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    CS_serverDoReply(info, reply);
+    return true;
 }
 bool allowBanEmail( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    CS_serverDoReply(info, reply);
+    return true;
 }
 bool listSection( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
     struct UserState *userState = (struct UserState *)info->persistentData;
-    return CS_serverDoReply(info, reply);
+    CS_serverDoReply(info, reply);
+    return true;
 }
 bool listFreezer( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    CS_serverDoReply(info, reply);
+    return true;
 }
 bool serveFile( struct CS_ClientInfo *info ) {
-    return CS_serverFileServer(info);
+    CS_serverFileServer(info);
+    return true;
 }
 bool renameFreezer( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
