@@ -43,6 +43,27 @@ struct UserState {
     struct CS_String128 _currentSection;
 };
 
+static void setUserStatePointers(struct UserState *userState ) {
+    userState->freezerId = (struct CS_String*)&userState->_freezerId;
+    userState->currentSection = (struct CS_String*)&userState->_currentSection;
+    userState->email = (struct CS_String*)&userState->_email;
+    userState->userId = (struct CS_String*)&userState->_userId;
+}
+
+
+static const struct CS_String *stringOne = &CS_STRING("1");
+static const char *cstringOne = "1";
+static struct UserState debugUserState = {0};
+
+struct UserState *initDebugUserState() {
+    struct UserState *returnValue = &debugUserState;
+    setUserStatePointers( returnValue );
+    CS_stringCopyCstringToStatic( returnValue->userId, 128, cstringOne, -1 );
+    CS_stringCopyCstringToStatic( returnValue->freezerId, 128, cstringOne, -1 );
+    CS_stringCopyCstringToStatic( returnValue->currentSection, 128, cstringOne, -1 );
+    CS_stringCopyCstringToStatic( returnValue->email, 128, "test@example.com", -1 );
+    return returnValue;
+}
 
 
 struct CS_SqlBackend *freezerBackend = NULL;
@@ -80,7 +101,7 @@ static int32_t imageTypeToInt( const char *which ) {
 static const struct CS_String *upcFromClientInfo( struct CS_ClientInfo *info ) {
     struct CS_RequestInfo *request = &info->requestInfo;
     const struct CS_String *upc = CS_stringTempStrrstr( &request->uri, &slash );
-    if( !upc || upc->length < 5 ) {
+    if( !upc || upc->length < 1 ) {
         return NULL;
     }
     upc = CS_stringSliceTempReference( upc, 1, -1 );
@@ -92,6 +113,8 @@ static const struct CS_String *upcFromClientInfo( struct CS_ClientInfo *info ) {
     return upc;
 }
 
+static const char *freezerItemsByFreezerSQL = "SELECT DISTINCT i.upc,i.image,i.instructions,i.nutrition FROM items AS i INNER JOIN freezers AS f on i.upc = f.upc INNER JOIN freezer_sections AS s ON f.sectionId = s.sectionId WHERE s.freezerId = \"%s\";";
+static const char *freezerSectionContentsSQL = "SELECT upc,num FROM freezers WHERE sectionId = \"%s\";";
 static const char *productImageName( const struct CS_String *upc, const char *imageType ) {
     return CS_tempBuffSnprintf(1024, "/freezer/products/upc_%s_%s.jpg", CS_stringTempCstring(upc), imageType );
 }
@@ -106,7 +129,7 @@ static bool addProductImage(const struct CS_String *upc) {
 static const char *selectAProductSQL = "SELECT image, instructions, nutrition FROM items WHERE upc = \"%s\";";
 static bool productExists( const struct CS_String *upc ) {
     bool returnValue;
-    const struct CS_String *sql = CS_stringTempSnprintf(2048, selectAProductSQL, upc);
+    const struct CS_String *sql = CS_stringTempSnprintf(2048, selectAProductSQL, CS_stringTempCstring(upc) );
     const struct CS_SqlResponse *response = CS_sqlQuery( freezerBackend, sql );
     returnValue = (response == NULL || response->numRows < 1);
     CS_sqlReturnResponse( response );
@@ -114,23 +137,23 @@ static bool productExists( const struct CS_String *upc ) {
 }
 static const char *selectAProduct( const struct CS_String *upc ) {
     const char *returnValue = NULL;
-    const struct CS_String *sql = CS_stringTempSnprintf(2048, selectAProductSQL, upc);
+    const struct CS_String *sql = CS_stringTempSnprintf(2048, selectAProductSQL, CS_stringTempCstring(upc) );
     const struct CS_SqlResponse *response = CS_sqlQuery( freezerBackend, sql );
     if( response == NULL || response->numRows < 1 ) {
         returnValue = NULL;
     } else {
         struct CS_JsonNode *base = CS_jsonNodeNew( 4096 );
         struct CS_JsonNode *root = CS_jsonNodeAppendObject(base,NULL);
-        CS_jsonNodeAppendUnquotedCstring(root,"upc",CS_stringTempCstring(upc));
-        CS_jsonNodeAppendUnquotedCstring(root,"image",productImageName(upc,"image"));
+        CS_jsonNodeAddUnquotedCstring(root,"upc",CS_stringTempCstring(upc));
+        CS_jsonNodeAddUnquotedCstring(root,"image",productImageName(upc,"image"));
         if( response->rows->values[1].intValue )
-            CS_jsonNodeAppendUnquotedCstring(root,"info",productImageName(upc,"image"));
+            CS_jsonNodeAddUnquotedCstring(root,"info",productImageName(upc,"info"));
         else
-            CS_jsonNodeAppendNull(root,"info");
+            CS_jsonNodeAddNull(root,"info");
         if( response->rows->values[2].intValue )
-            CS_jsonNodeAppendUnquotedCstring(root,"info",productImageName(upc,"nutrition"));
+            CS_jsonNodeAddUnquotedCstring(root,"info",productImageName(upc,"nutrition"));
         else
-            CS_jsonNodeAppendNull(root,"nutrition");
+            CS_jsonNodeAddNull(root,"nutrition");
         returnValue = CS_jsonNodePrintableTemp(base);
         CS_jsonFree(base);
     }
@@ -253,6 +276,7 @@ const char *sectionsForFreezer( const struct CS_String *freezerId ) {
         struct CS_JsonNode *currentObject = CS_jsonNodeAppendObject(topLevelArray, NULL);
         CS_jsonNodeAppendUnquotedCstring( currentObject, "sectionId", CS_stringTempCstring( currentRow->values[0].stringValue ) );
         CS_jsonNodeAppendUnquotedCstring( currentObject, "section_name", CS_stringTempCstring( currentRow->values[0].stringValue ) );
+        currentRow = currentRow->next;
     }
     returnValue = CS_jsonNodePrintableTemp(base);
     CS_jsonFree(base);
@@ -298,8 +322,10 @@ struct UserState *CreateUserState(const char *googleId, const char *email) {
     struct UserState *userState = CS_allocZero(sizeof(struct UserState));
     if( userState == NULL ) return NULL;
 
-    CS_stringCopyCstringToStatic( (struct CS_String*)&userState->_userId, 128, googleId, -1 );
-    CS_stringCopyCstringToStatic( (struct CS_String*)&userState->_email, 128, email, -1 );
+    setUserStatePointers(userState);
+
+    CS_stringCopyCstringToStatic( userState->userId, 128, googleId, -1 );
+    CS_stringCopyCstringToStatic( userState->email, 128, email, -1 );
     if( response == NULL || response->numRows == 0 ) {
         int retries = 6;
         if( response ) CS_sqlReturnResponse(response);
@@ -313,7 +339,7 @@ struct UserState *CreateUserState(const char *googleId, const char *email) {
             CS_free(userState);
             return NULL;
         }
-        CS_stringCopyCstringToStatic( (struct CS_String*)&userState->_freezerId, 128, freezerUUID, -1 );
+        CS_stringCopyCstringToStatic( userState->freezerId, 128, freezerUUID, -1 );
         do {
             sectionUUID = CS_uuid4CstringTemp();
         } while ( --retries>0 && addFreezerSection(freezerUUID, sectionUUID, "Default") );
@@ -321,21 +347,17 @@ struct UserState *CreateUserState(const char *googleId, const char *email) {
             CS_free(userState);
             return NULL;
         }
-        CS_stringCopyCstringToStatic( (struct CS_String*)&userState->_currentSection, 128, sectionUUID, -1 );
+        CS_stringCopyCstringToStatic( userState->currentSection, 128, sectionUUID, -1 );
         
         if( addUser(googleId,email,freezerUUID,sectionUUID) ) {
             CS_free(userState);
             return NULL;
         }
     } else {
-        CS_stringCopyToStatic( (struct CS_String*)&userState->_freezerId, response->rows->values[1].stringValue, 128 );
-        CS_stringCopyToStatic( (struct CS_String*)&userState->_currentSection, response->rows->values[2].stringValue, 128 );
+        CS_stringCopyToStatic( userState->freezerId, response->rows->values[1].stringValue, 128 );
+        CS_stringCopyToStatic( userState->currentSection, response->rows->values[2].stringValue, 128 );
         CS_sqlReturnResponse(response);
     }
-    userState->freezerId = (struct CS_String*)&userState->_freezerId;
-    userState->currentSection = (struct CS_String*)&userState->_currentSection;
-    userState->email = (struct CS_String*)&userState->_email;
-    userState->userId = (struct CS_String*)&userState->_userId;
     return userState;
 }
 
@@ -345,7 +367,6 @@ const struct CS_String googleLoginUri = CS_STRING("/freezer/googlelogin");
 static struct CS_HashTable *cheapSessions = NULL;
 static struct CS_HashTable *googleIdToSessionId = NULL;
 
-static const char *sessionThatIsAdmin = NULL;
 static const char *adminEmail = NULL;
 
 bool startupFreezer( const char *inputAdminEmail ) {
@@ -365,6 +386,8 @@ bool startupFreezer( const char *inputAdminEmail ) {
         CS_sqlReturnResponse( response );
     }
     
+    CS_hashtablePut( cheapSessions, cstringOne, initDebugUserState() );
+
     return false;
 }
 
@@ -652,20 +675,16 @@ bool removeFamilyMember( struct CS_ClientInfo *info ) {
     return true;
 }
 bool itemOperationOnFreezerDoesRepliesOnError( struct CS_ClientInfo *info, const struct CS_String *upc ) {
-    struct CS_Reply *reply;
     if( upc == NULL ) {
-        reply = CS_serverCreateReply(info, CS_RESPONSE_500, CS_MIME_DO_NOT_SET, NULL, 0);
-        CS_serverDoReply(info, reply);
+        CS_serverReplyError(info, CS_RESPONSE_500, "DB not found.");
         return true;
     }
     if( !productExists( upc ) ) {
-        reply = CS_serverCreateReply(info, CS_RESPONSE_404, CS_MIME_DO_NOT_SET, NULL, 0);
-        CS_serverDoReply(info, reply);
+        CS_serverReplyError(info, CS_RESPONSE_404, "Product not found.");
         return true;
     }
     if( !hasAccessToFreezer(info) ) {
-        reply = CS_serverCreateReply(info, CS_RESPONSE_401, CS_MIME_DO_NOT_SET, NULL, 0);
-        CS_serverDoReply(info, reply);
+        CS_serverReplyError(info, CS_RESPONSE_401, "Not allowed.");
         return true;
     }
     return false;
@@ -674,12 +693,11 @@ bool addItem( struct CS_ClientInfo *info ) {
     struct UserState *userState = (struct UserState *)info->appData;
     const struct CS_String *upc = upcFromClientInfo(info);
     if( itemOperationOnFreezerDoesRepliesOnError( info, upc ) ) return true;
-    struct CS_Reply *reply = NULL;
     if( addOneToFreezerSection(userState->currentSection, upc) ) {
-        reply = CS_serverCreateReply(info, CS_RESPONSE_500, CS_MIME_DO_NOT_SET, NULL, 0);
+        CS_serverReplyError(info, CS_RESPONSE_500, "Db Error.");
         return true;
     }
-    reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
+    struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
     CS_serverDoReply(info, reply);
     return true;
 }
@@ -687,11 +705,12 @@ bool removeItem( struct CS_ClientInfo *info ) {
     struct UserState *userState = (struct UserState *)info->appData;
     const struct CS_String *upc = upcFromClientInfo(info);
     if( itemOperationOnFreezerDoesRepliesOnError( info, upc ) ) return true;
-    struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
     if( subOneFromFreezerSection(userState->currentSection, upc) ) {
-        reply = CS_serverCreateReply(info, CS_RESPONSE_500, CS_MIME_DO_NOT_SET, NULL, 0);
+        CS_serverReplyError(info, CS_RESPONSE_500, "Database issue.");
         return true;
     }
+    struct CS_Reply *reply;
+    reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
     CS_serverDoReply(info, reply);
     return true;
 }
@@ -765,3 +784,74 @@ bool renameSection( struct CS_ClientInfo *info ) {
     return CS_serverDoReply(info, reply);
 }
 
+bool getState( struct CS_ClientInfo *info ) {
+    struct UserState *userState = (struct UserState *)info->persistentData;
+    struct CS_JsonNode *base = CS_jsonNodeNew(8192);
+    struct CS_JsonNode *root = CS_jsonNodeAppendObject(base,NULL);
+    struct CS_JsonNode *sections = CS_jsonNodeAddArray(root,"sections");
+    struct CS_JsonNode *pantries = CS_jsonNodeAddObject(root,"section_contents");
+    const struct CS_String *sql = CS_stringTempSnprintf( 2048, sectionsForFreezerSQL, CS_stringTempCstring(userState->freezerId) );
+    const struct CS_SqlResponse *response = CS_sqlQuery(freezerBackend,sql);
+    if( response == NULL ) {
+        goto DB_ERROR;
+    }
+    struct CS_SqlRow *currentRow = response->rows;
+    while( currentRow ) {
+        const char *sectionId = CS_stringTempCstring( currentRow->values[0].stringValue );
+        struct CS_JsonNode *currentObject = CS_jsonNodeAddObject(sections, NULL);
+        struct CS_JsonNode *currentItems = CS_jsonNodeAddArray(pantries, sectionId );
+        CS_jsonNodeAddUnquotedCstring( currentObject, "sectionId", CS_stringTempCstring( currentRow->values[0].stringValue ) );
+        CS_jsonNodeAddUnquotedCstring( currentObject, "section_name", CS_stringTempCstring( currentRow->values[0].stringValue ) );
+        CS_jsonNodeAddBool( currentObject, "current", CS_stringStrcmp( currentRow->values[0].stringValue, userState->currentSection) == 0 );
+        sql = CS_stringTempSnprintf(2048, freezerSectionContentsSQL,sectionId ); 
+        const struct CS_SqlResponse *sectionResponse = CS_sqlQuery(freezerBackend,sql);
+        if( sectionResponse == NULL ) {
+            goto DB_ERROR;
+        }
+        const struct CS_SqlRow *itemRow = sectionResponse->rows;
+        while( itemRow ) {
+            struct CS_JsonNode *item = CS_jsonNodeAddObject(currentItems,NULL);
+            CS_jsonNodeAddUnquotedCstring( item, "upc", CS_stringTempCstring( itemRow->values[0].stringValue ) );
+            CS_jsonNodeAddInteger( item, "num", itemRow->values[1].intValue );
+            itemRow = itemRow->next;
+        }
+        currentRow = currentRow->next;
+        CS_sqlReturnResponse( sectionResponse );
+    }
+    CS_sqlReturnResponse(response);
+    sql = CS_stringTempSnprintf(2048, freezerItemsByFreezerSQL, CS_stringTempCstring(userState->freezerId));
+    response = CS_sqlQuery( freezerBackend, sql );
+    if( response == NULL ) {
+        goto DB_ERROR;
+    }
+    struct CS_JsonNode *items = CS_jsonNodeAddObject(root,"itemdb");
+    struct CS_SqlRow *itemRow = response->rows;
+    while( itemRow ) {
+        const struct CS_String *upc = itemRow->values[0].stringValue;
+        struct CS_JsonNode *itemNode = CS_jsonNodeAddObject(items, CS_stringTempCstring(upc));
+        if( itemRow->values[1].intValue )
+            CS_jsonNodeAddUnquotedCstring(itemNode,"image",productImageName(upc,"image"));
+        else
+            CS_jsonNodeAddNull(root,"image");
+        if( itemRow->values[2].intValue )
+            CS_jsonNodeAddUnquotedCstring(itemNode,"info",productImageName(upc,"info"));
+        else
+            CS_jsonNodeAddNull(root,"info");
+        if( itemRow->values[3].intValue )
+            CS_jsonNodeAddUnquotedCstring(itemNode,"nutrition",productImageName(upc,"nutrition"));
+        else
+            CS_jsonNodeAddNull(root,"nutrition");
+        itemRow = itemRow->next;
+    }
+    CS_sqlReturnResponse(response);
+    const char *jsonReply = CS_jsonNodePrintableTemp(base);
+    struct CS_Reply *reply = CS_serverCreateReply( info, CS_RESPONSE_200, CS_MIME_JSON, jsonReply, strlen(jsonReply) );
+    CS_serverDoReply(info, reply);
+    return true;
+
+DB_ERROR:
+    CS_jsonFree(base);
+    CS_serverReplyError(info, CS_RESPONSE_500, "Database issue");
+    return true;
+
+}

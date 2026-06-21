@@ -287,4 +287,13 @@ let retries = 2; while (retries > 0) { try {
         return fetch( "/freezer/api/allow/ban",{credentials:"same-origin",method:"POST",body:thing} ); };
     } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
 } }
+,
+"api_state": async function api_state(thing) {
+let retries = 2; while (retries > 0) { try {
+    if( thing === undefined ) {
+        return fetch( "/freezer/api/state",{credentials:"same-origin",method:"GET"} );
+    } else {
+        return fetch( "/freezer/api/state",{credentials:"same-origin",method:"GET",body:thing} ); };
+    } catch(e) {retries--;alert(e.message);} finally {retries = 0;};
+} }
 };

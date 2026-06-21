@@ -31,5 +31,6 @@ api_freezer_rename,EXACT,POST,renameFreezer
 api_allow_add,EXACT,POST,allowAddEmail
 api_allow_remove,EXACT,POST,allowRemoveEmail
 api_allow_ban,EXACT,POST,allowBanEmail
+api_state,EXACT,GET,getState
 api_wildcard_get,WILDCARD,GET,serveFile
 api_wildcard_head,WILDCARD,HEAD,serveFile

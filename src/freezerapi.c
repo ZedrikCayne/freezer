@@ -37,6 +37,7 @@ const struct CS_String api_freezer_rename_uri = CS_STRING("/freezer/api/freezer/
 const struct CS_String api_allow_add_uri = CS_STRING("/freezer/api/allow/add");
 const struct CS_String api_allow_remove_uri = CS_STRING("/freezer/api/allow/remove");
 const struct CS_String api_allow_ban_uri = CS_STRING("/freezer/api/allow/ban");
+const struct CS_String api_state_uri = CS_STRING("/freezer/api/state");
 const struct CS_String api_wildcard_get_uri = CS_STRING("/freezer/api/wildcard/get");
 const struct CS_String api_wildcard_head_uri = CS_STRING("/freezer/api/wildcard/head");
 struct CS_Route freezerRoutes[] = {
@@ -73,6 +74,7 @@ struct CS_Route freezerRoutes[] = {
 { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &api_allow_add_uri, allowAddEmail, NULL },
 { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &api_allow_remove_uri, allowRemoveEmail, NULL },
 { CS_HTTP_METHOD_POST, CS_ROUTE_TYPE_EXACT, &api_allow_ban_uri, allowBanEmail, NULL },
+{ CS_HTTP_METHOD_GET, CS_ROUTE_TYPE_EXACT, &api_state_uri, getState, NULL },
 { CS_HTTP_METHOD_GET, CS_ROUTE_TYPE_WILDCARD, NULL, serveFile, NULL },
 { CS_HTTP_METHOD_HEAD, CS_ROUTE_TYPE_WILDCARD, NULL, serveFile, NULL },
 };

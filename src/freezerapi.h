@@ -40,6 +40,7 @@ extern const struct CS_String api_freezer_rename_uri;
 extern const struct CS_String api_allow_add_uri; 
 extern const struct CS_String api_allow_remove_uri; 
 extern const struct CS_String api_allow_ban_uri; 
+extern const struct CS_String api_state_uri; 
 extern const struct CS_String api_wildcard_get_uri; 
 extern const struct CS_String api_wildcard_head_uri; 
 #ifdef __cplusplus

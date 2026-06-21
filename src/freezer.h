@@ -37,15 +37,13 @@ bool addFreezer( struct CS_ClientInfo *info );
 bool allowAddEmail( struct CS_ClientInfo *info );
 bool allowRemoveEmail( struct CS_ClientInfo *info );
 bool allowBanEmail( struct CS_ClientInfo *info );
-
-#ifdef __cplusplus
-}
-#endif
-bool CS_serverFileServer( struct CS_ClientInfo *info );
-bool CS_serverFileServer( struct CS_ClientInfo *info );
 bool listSection( struct CS_ClientInfo *info );
 bool listFreezer( struct CS_ClientInfo *info );
 bool CS_serverFileServer( struct CS_ClientInfo *info );
 bool serveFile( struct CS_ClientInfo *info );
 bool renameFreezer( struct CS_ClientInfo *info );
 bool renameSection( struct CS_ClientInfo *info );
+bool getState( struct CS_ClientInfo *info );
+#ifdef __cplusplus
+}
+#endif

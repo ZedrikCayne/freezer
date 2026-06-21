@@ -1,0 +1,1 @@
+curl -k -H "Cookie: freezer_session=1" https://webmud.publicvm.com/freezer/api/state
