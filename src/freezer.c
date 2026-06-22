@@ -855,3 +855,7 @@ DB_ERROR:
     return true;
 
 }
+bool logfilter( struct CS_ClientInfo *info ) {
+    CS_LOG_LOUD("REQUEST: %.*s", info->requestInfo.uri.length, info->requestInfo.uri.data);
+return false;
+}

@@ -1,5 +1,6 @@
 googlelogin,EXACT,ANY,googleLogin
 cookiefilter,FILTER,ANY,cookieFilter
+logfilter,FILTER,ANY,logfilter
 api_logbody,EXACT,POST,logBody
 api_product_putimage,PREFIX,POST,uploadImage,image
 api_product_putinfo,PREFIX,POST,uploadImage,info

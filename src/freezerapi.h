@@ -9,6 +9,7 @@ extern struct CS_Route freezerRoutes[];
 int32_t numFreezerRoutes(void);
 extern const struct CS_String googlelogin_uri; 
 extern const struct CS_String cookiefilter_uri; 
+extern const struct CS_String logfilter_uri; 
 extern const struct CS_String api_logbody_uri; 
 extern const struct CS_String api_product_putimage_uri; 
 extern const struct CS_String api_product_putinfo_uri; 

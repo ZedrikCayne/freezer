@@ -47,3 +47,4 @@ bool getState( struct CS_ClientInfo *info );
 #ifdef __cplusplus
 }
 #endif
+bool logfilter( struct CS_ClientInfo *info );
