@@ -24,20 +24,20 @@ while read API_NAME TYPE METHOD CFUNC EXTRA; do
             echo "\"${API_NAME}\": async function ${API_NAME}(thing) {" >> ${JSCRIPT}
             echo "let retries = 2; while (retries > 0) { try {" >> ${JSCRIPT}
             echo "    if( thing === undefined ) {" >> ${JSCRIPT}
-            echo "        return fetch( \"${THIS_URI}\",{credentials:\"same-origin\",method:\"${METHOD}\"} );" >> ${JSCRIPT}
+            echo "        var promise = fetch( \"${THIS_URI}\",{credentials:\"same-origin\",method:\"${METHOD}\"} ); retries = 0; return promise;" >> ${JSCRIPT}
             echo "    } else {" >> ${JSCRIPT}
-            echo "        return fetch( \"${THIS_URI}\",{credentials:\"same-origin\",method:\"${METHOD}\",body:thing} ); };" >> ${JSCRIPT}
-            echo "    } catch(e) {retries--;alert(e.message);} finally {retries = 0;};" >> ${JSCRIPT}
-            echo "} }" >> ${JSCRIPT}
+            echo "        var promise = fetch( \"${THIS_URI}\",{credentials:\"same-origin\",method:\"${METHOD}\",body:thing} ); retries = 0; return promise; };" >> ${JSCRIPT}
+            echo "    } catch(e) {retries--;} };" >> ${JSCRIPT}
+            echo "}" >> ${JSCRIPT}
         else
             echo "\"${API_NAME}\": async function ${API_NAME}(what,thing) {" >> ${JSCRIPT}
             echo "let retries = 2; while (retries > 0) { try {" >> ${JSCRIPT}
             echo "    if( thing === undefined ) {" >> ${JSCRIPT}
-            echo "        return fetch( \"${THIS_URI}/\" + what,{credentials:\"same-origin\",method:\"${METHOD}\"} );" >> ${JSCRIPT}
+            echo "        var promise = fetch( \"${THIS_URI}/\" + what,{credentials:\"same-origin\",method:\"${METHOD}\"} ); retries = 0; return promise;" >> ${JSCRIPT}
             echo "    } else {" >> ${JSCRIPT}
-            echo "        return fetch( \"${THIS_URI}/\" + what,{credentials:\"same-origin\",method:\"${METHOD}\",body:thing} ); }" >> ${JSCRIPT}
-            echo "    } catch(e) {retries--;alert(e.message);} finally {retries = 0;};" >> ${JSCRIPT}
-            echo "} }" >> ${JSCRIPT}
+            echo "        var promise = fetch( \"${THIS_URI}/\" + what,{credentials:\"same-origin\",method:\"${METHOD}\",body:thing} ); retries = 0; return promise; }" >> ${JSCRIPT}
+            echo "    } catch(e) {retries--;} };" >> ${JSCRIPT}
+            echo "}" >> ${JSCRIPT}
         fi
         PREFIX_CHAR=","
     fi

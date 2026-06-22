@@ -17,7 +17,7 @@
             min-height: 100vh;
             margin: 0;
             padding: 20px;
-        }
+         }
          #video {
              position: absolute;
              width: 100%;
@@ -63,25 +63,29 @@
 <body>
     <div class="controls" style="flex-direction:horizontal;position:absolute;top:0%;left:0%;width:100%;height:15%">
         <button id="scanBtn">Scan To Add</button>
-        <button id="apiTest">API</button>
+        <!--button id="captureBtn">Capture</button-->
     </div>
 
+    <button id="cancelBtn" classs="ui-overlay" style="color:white;background-color:#FF0000;z-index:2;position:absolute;top:0%;left:80%;width:20%;height:10%;display:none;">X</button>
     <button id="captureFrameBtn" class="ui-overlay" style="position:absolute;top:80%;left:35%;right:65%;bottom:95%;display:none;">Capture</button>
     <button id="cropBtn" class="ui-overlay" style="position:absolute;top:80%;left:35%;right:65%;bottom:95%;display:none;">Crop</button>
     <video id="video" playsinline autoplay></video>
-     <canvas id="detectionCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
+     <canvas id="detectionCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
      <canvas id="cropCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
 
     <script>
+        const audioContext = {"ac":null,"osc":null};
+        const cancelBtn = document.getElementById('cancelBtn');
         const scanBtn = document.getElementById('scanBtn');
         const captureFrameBtn = document.getElementById('captureFrameBtn');
-        const apiBtn = document.getElementById('apiTest');
         const cropBtn = document.getElementById('cropBtn');
         const video = document.getElementById('video');
         const detectionCanvas = document.getElementById('detectionCanvas');
         const detectionCtx = detectionCanvas.getContext('2d');
         const cropCanvas = document.getElementById('cropCanvas');
         const ctx = cropCanvas.getContext('2d');
+
+        //const captureBtn = document.getElementById("captureBtn");
 
         const offscreenCanvas = document.createElement('canvas');
         const offscreenCtx = offscreenCanvas.getContext('2d');
@@ -101,6 +105,8 @@
         let freezerDb = {};
         let currentSection = '';
 
+        let wasScanning = false;
+
         function genericReceiver( what, postedWith, toObject ) {
             alert(what);
         }
@@ -108,6 +114,7 @@
         resetUI();
 
         function resetUI() {
+            cancelBtn.style.display = 'none';
             barcodeDetectorOn = false;
             video.style.display = 'none';
             cropCanvas.style.display = 'none';
@@ -122,6 +129,7 @@
 
         function resetButtons() {
             scanBtn.disabled = false;
+            cancelBtn.disabled = true;
         }
 
         function stopCamera() {
@@ -151,9 +159,13 @@
 
          async function startScanner() {
              resetUI();
+             wasScanning = true;
+             cancelBtn.disabled = false;
+             cancelBtn.style.display = 'block';
              barcodeDetectorOn = true;
-             //video.style.display = 'block';
+             scanBtn.disabled = true;
              detectionCanvas.style.display = 'block';
+             detectionCanvas.style.pointerEvents = 'auto';
 
             currentUPC = null;
 
@@ -168,6 +180,7 @@
                 try {
                     detector = new BarcodeDetector();
                 } catch (e) {
+                    detectedBarcodes = [ {rawValue:"1",boundingBox:{x:0,y:0,width:100,height:100}} ];
                     logServer( e.message );
                 }
 
@@ -203,23 +216,27 @@
                     if (clickedBarcode) {
                         currentUPC = clickedBarcode.rawValue;
                         ServerApi.api_item_add( currentUPC ).then( response => {
+                            logServer("Got " + response.status );
                             switch( response.status ) {
                                 case 200:
+                                    beepHi();
                                     //Okay.
                                 break;
                                 case 404:
                                     //Missing product, upload then add.
+                                    beepLow();
                                     pushMode = 'image';
                                     addOneAfterCapture = true;
                                     startCapture();
                                 break;
                                 default:
+                                    beepLow();
+                                    stopCamera();
+                                    resetButtons();
+                                    resetUI();
                                     alert("Error posting picture...try again later.");
                             }
                         } );
-                        stopCamera();
-                        resetButtons();
-                        resetUI();
                     }
                 });
 
@@ -230,8 +247,23 @@
             }
         }
 
+        async function testUploadInfo() {
+            currentUPC = "1";
+            startCapture();
+            pushMode = 'info';
+        }
+
+        async function testUploadNutrition() {
+            currentUPC = "1";
+            startCapture();
+            pushMode = 'nutrition';
+        }
+
         async function startCapture() {
             resetUI();
+            cancelBtn.disabled = false;
+            cancelBtn.style.display = 'block';
+            scanBtn.disabled = true;
             video.style.display = 'block';
             captureFrameBtn.style.display = 'block';
             try {
@@ -312,7 +344,7 @@
             
             ctx.save();
             ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-            ctx.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
+            //ctx.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
             ctx.globalCompositeOperation = 'destination-out';
             ctx.fillRect(selection.x, selection.y, selection.w, selection.h);
             ctx.restore();
@@ -362,19 +394,37 @@
                 const arrayBuffer = await blob.arrayBuffer();
                 const uint8Array = new Uint8Array(arrayBuffer);
 
+                var promise = null;
+
                 switch(pushMode) {
                     case "image":
-                        ServerApi.api_product_putimage( currentUPC, blob );
+                        promise = ServerApi.api_product_putimage( currentUPC, blob );
                         break;
                     case "nutrition":
-                        ServerApi.api_product_putnutrition( currentUPC, blob );
+                        promise = ServerApi.api_product_putnutrition( currentUPC, blob );
                         break;
                     case "info":
-                        ServerApi.api_product_putinfo( currentUPC, blob );
+                        promise = ServerApi.api_product_putinfo( currentUPC, blob );
                         break;
                 }
+                if( promise ) promise.then( result => {
+                    if( result.ok ) {
+                        beepHi();
+                        startScanner();
+                    } else {
+                        beepLow();
+                        resetUI();
+                        resetButtons();
+                        alert("Failed to upload photo. Try again later.");
+                    }
+                } );
             }
             
+        }
+
+        async function cancelButton() {
+            wasScanning = false;
+            stopCamera();
             resetUI();
             resetButtons();
         }
@@ -384,13 +434,46 @@
             alert( "Got response" );
         }
 
+        function beepHi() {
+            audioContext.hiGain.gain.setValueAtTime( 1, audioContext.ac.currentTime);
+            audioContext.hiGain.gain.setValueAtTime( 0, audioContext.ac.currentTime + 0.05);
+        }
+
+        function beepLow() {
+            audioContext.loGain.gain.setValueAtTime( 1, audioContext.ac.currentTime);
+            audioContext.loGain.gain.setValueAtTime( 0, audioContext.ac.currentTime + 0.05);
+        }
+
+        function initAudio() {
+            if( audioContext.ac !== null ) {
+                audioContext.ac.close();
+                audioContext.ac = null;
+            }
+            let ac = new AudioContext();
+            audioContext.ac = ac;
+            audioContext.hiOsc = ac.createOscillator();
+            audioContext.hiOsc.frequency.setValueAtTime(1760,0);
+            audioContext.hiOsc.start(0);
+            audioContext.hiGain = ac.createGain();
+            audioContext.hiGain.gain.setValueAtTime(0,0);
+            audioContext.hiOsc.connect(audioContext.hiGain).connect(ac.destination);
+            audioContext.loOsc = ac.createOscillator();
+            audioContext.loOsc.frequency.setValueAtTime(880,0);
+            audioContext.loOsc.start(0);
+            audioContext.loGain = ac.createGain();
+            audioContext.loGain.gain.setValueAtTime(0,0);
+            audioContext.loOsc.connect(audioContext.loGain).connect(ac.destination);
+        }
+
+        cancelBtn.addEventListener('click', cancelButton);
         scanBtn.addEventListener('click', startScanner);
-        apiBtn.addEventListener('click', apiTest);
         captureFrameBtn.addEventListener('click', captureFrame);
         cropBtn.addEventListener('click', cropAndSave);
+        //captureBtn.addEventListener('click', testUploadInfo );
 
         window.onload = function() {
-            ServerApi.api_state().then(response => { var text = response.text(); serverLog(text); });
+            initAudio();
+            ServerApi.api_state().then(response => { var text = response.text(); logServer(text); });
         };
 
     </script>

@@ -131,7 +131,7 @@ static bool productExists( const struct CS_String *upc ) {
     bool returnValue;
     const struct CS_String *sql = CS_stringTempSnprintf(2048, selectAProductSQL, CS_stringTempCstring(upc) );
     const struct CS_SqlResponse *response = CS_sqlQuery( freezerBackend, sql );
-    returnValue = (response == NULL || response->numRows < 1);
+    returnValue = (response && response->numRows > 0);
     CS_sqlReturnResponse( response );
     return returnValue;
 }
@@ -216,7 +216,7 @@ static bool addFreezerToUser( const struct CS_String *userId,
     CS_sqlReturnResponse( response );
     return returnValue;
 }
-static const char *userAdminOnFreezerSQL = "SELECT FROM user_to_freezer (admin, owner) WHERE userId = \"%s\" AND freezerId = \"%s\";";
+static const char *userAdminOnFreezerSQL = "SELECT admin, owner FROM user_to_freezer WHERE userId = \"%s\" AND freezerId = \"%s\";";
 static bool userAdminOnFreezer( const struct CS_String *userId,
                          const struct CS_String *freezerId ) {
     bool returnValue = false;
@@ -690,7 +690,7 @@ bool itemOperationOnFreezerDoesRepliesOnError( struct CS_ClientInfo *info, const
     return false;
 }
 bool addItem( struct CS_ClientInfo *info ) {
-    struct UserState *userState = (struct UserState *)info->appData;
+    struct UserState *userState = (struct UserState *)info->persistentData;
     const struct CS_String *upc = upcFromClientInfo(info);
     if( itemOperationOnFreezerDoesRepliesOnError( info, upc ) ) return true;
     if( addOneToFreezerSection(userState->currentSection, upc) ) {
@@ -702,7 +702,7 @@ bool addItem( struct CS_ClientInfo *info ) {
     return true;
 }
 bool removeItem( struct CS_ClientInfo *info ) {
-    struct UserState *userState = (struct UserState *)info->appData;
+    struct UserState *userState = (struct UserState *)info->persistentData;
     const struct CS_String *upc = upcFromClientInfo(info);
     if( itemOperationOnFreezerDoesRepliesOnError( info, upc ) ) return true;
     if( subOneFromFreezerSection(userState->currentSection, upc) ) {
