@@ -51,7 +51,6 @@ static void setUserStatePointers(struct UserState *userState ) {
 }
 
 
-static const struct CS_String *stringOne = &CS_STRING("1");
 static const char *cstringOne = "1";
 static struct UserState debugUserState = {0};
 
@@ -78,7 +77,6 @@ static const struct CS_String create_items = CS_STRING("CREATE TABLE IF NOT EXIS
 static const struct CS_String invited = CS_STRING("CREATE TABLE IF NOT EXISTS invites ( email TEXT(128), freezerId TEXT(128), by TEXT(128), accepted BOOLEAN, acknowledged BOOLEAN, CONSTRAINT PK_invites PRIMARY KEY (email,freezerId) )");
 
 static const struct CS_String slash = CS_STRING("/");
-static const struct CS_String invalid_chars = CS_STRING(". &;?#");
 static const struct CS_String contentLength = CS_STRING("Content-Length");
 
 static const struct CS_String *imageTypes[] = {
@@ -105,9 +103,7 @@ static const struct CS_String *upcFromClientInfo( struct CS_ClientInfo *info ) {
         return NULL;
     }
     upc = CS_stringSliceTempReference( upc, 1, -1 );
-    const char *savePtr = NULL;
-    const struct CS_String *maybeToken = CS_stringTempStrtok( upc, &invalid_chars, &savePtr );
-    if( maybeToken && CS_stringStrcmp(upc,maybeToken) )  {
+    if( !CS_stringAlnum(upc) ) {
         return NULL;
     }
     return upc;
@@ -353,6 +349,10 @@ struct UserState *CreateUserState(const char *googleId, const char *email) {
             CS_free(userState);
             return NULL;
         }
+        if( addFreezerToUser(userState->userId,userState->freezerId,true,true) ) {
+            CS_free(userState);
+            return NULL;
+        }
     } else {
         CS_stringCopyToStatic( userState->freezerId, response->rows->values[1].stringValue, 128 );
         CS_stringCopyToStatic( userState->currentSection, response->rows->values[2].stringValue, 128 );
@@ -411,7 +411,6 @@ bool loginAndReturnIndex( struct CS_ClientInfo *info, const char *sessionCookie 
 }
 
 static const struct CS_String localhost = CS_STRING("localhost");
-static const struct CS_String aHost = CS_STRING("webmud.publicvm.com");
 bool loginPageReturn( struct CS_ClientInfo *info ) {
     struct CS_HtmlNode *root = CS_htmlCreateRoot("html",2048);
     struct CS_HtmlNode *head = CS_htmlAddContainerAfter( root, "head" );
@@ -715,8 +714,8 @@ bool removeItem( struct CS_ClientInfo *info ) {
     return true;
 }
 bool addSection( struct CS_ClientInfo *info ) {
+    //struct UserState *userState = (struct UserState *)info->persistentData;
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    struct UserState *userState = (struct UserState *)info->persistentData;
     CS_serverDoReply(info, reply);
     return true;
 }
@@ -762,7 +761,7 @@ bool allowBanEmail( struct CS_ClientInfo *info ) {
 }
 bool listSection( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    struct UserState *userState = (struct UserState *)info->persistentData;
+    //struct UserState *userState = (struct UserState *)info->persistentData;
     CS_serverDoReply(info, reply);
     return true;
 }
@@ -776,8 +775,13 @@ bool serveFile( struct CS_ClientInfo *info ) {
     return true;
 }
 bool renameFreezer( struct CS_ClientInfo *info ) {
-    struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    return CS_serverDoReply(info, reply);
+    struct UserState *userState = (struct UserState *)info->persistentData;
+    if( hasAdminToFreezer(info) ) {
+        renameFreezerSection(userState->freezerId,userState->currentSection,NULL);
+    } else {
+        CS_serverReplyError(info, CS_RESPONSE_401, "Not allowed.");
+    }
+    return true;
 }
 bool renameSection( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);

@@ -48,7 +48,6 @@ static char *certFile = NULL;
 static char *keyFile = NULL;
 static char *selfSignHostname = NULL;
 static int cacheTimeInSeconds = 0;
-static char localhost[] = "localhost";
 
 CS_ARG_DEF(wantHelp,CS_ARG_CMP("-?","-help","--help"),"Prints this help");
 CS_ARG_DEF(noWarn,CS_ARG_CMP("-w","--no-warn"),"No warning logs.");

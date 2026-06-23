@@ -20,6 +20,8 @@ target_include_directories( freezer PUBLIC crankshaft/include )
 
 target_link_directories( freezer PUBLIC crankshaft/lib )
 
+target_compile_options( freezer PUBLIC -Wall )
+
 if( MACOSX )
 if( OPENSSL_FOUND )
 target_include_directories( freezer PUBLIC ${OPENSSL_INCLUDE_DIR} )

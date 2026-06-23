@@ -58,6 +58,11 @@
             font-size: 24px;
             cursor: pointer;
         }
+        .square-item {
+            width: 30%;
+            aspect-ratio: 1 / 1;
+            object-fit: contain;
+        }
     </style>
 </head>
 <body>
@@ -65,10 +70,12 @@
         <button id="scanBtn">Scan To Add</button>
         <!--button id="captureBtn">Capture</button-->
     </div>
+    <div id="fill" style="position:absolute;top:15%;left:0%;width:100%;height:85%;overflow-x:hidden;overflow-y:auto">
+    </div>
 
-    <button id="cancelBtn" classs="ui-overlay" style="color:white;background-color:#FF0000;z-index:2;position:absolute;top:0%;left:80%;width:20%;height:10%;display:none;">X</button>
-    <button id="captureFrameBtn" class="ui-overlay" style="position:absolute;top:80%;left:35%;right:65%;bottom:95%;display:none;">Capture</button>
-    <button id="cropBtn" class="ui-overlay" style="position:absolute;top:80%;left:35%;right:65%;bottom:95%;display:none;">Crop</button>
+    <button id="cancelBtn" classs="ui-overlay" style="color:white;background-color:#FF0000;z-index:2;position:absolute;top:0%;left:80%;width:20%;aspect-ratio: 1 / 1;display:none;">X</button>
+    <button id="captureFrameBtn" class="ui-overlay" style="background-color:red;position:absolute;top:80%;left:45%;width:10%;aspect-ratio: 1 / 1;display:none;"></button>
+    <button id="cropBtn" class="ui-overlay" style="background-color:green;position:absolute;top:80%;left:45%;width:10%;aspect-ratio: 1 / 1;display:none;"></button>
     <video id="video" playsinline autoplay></video>
      <canvas id="detectionCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
      <canvas id="cropCanvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
