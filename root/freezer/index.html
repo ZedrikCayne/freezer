@@ -33,6 +33,7 @@
              border: none;
              display: none;
              cursor: crosshair;
+             object-fit: contain;
              touch-action: none;
          }
         .controls {
@@ -58,19 +59,33 @@
             font-size: 24px;
             cursor: pointer;
         }
-        .square-item {
-            width: 30%;
+        .squareholder {
+            display: grid;
+            grid-template-columns: 50% 50%;
+            position:absolute;
+            top: 15%;
+            left: 0%;
+            width: 100%;
+            height: 85%;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        .squareitem {
+            width: 100%;
+            padding: 5px;
             aspect-ratio: 1 / 1;
-            object-fit: contain;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
         }
     </style>
 </head>
 <body>
     <div class="controls" style="flex-direction:horizontal;position:absolute;top:0%;left:0%;width:100%;height:15%">
         <button id="scanBtn">Scan To Add</button>
-        <!--button id="captureBtn">Capture</button-->
+        <!--button id="captureBtn" onClick="beepLowLow()">beep</button-->
     </div>
-    <div id="fill" style="position:absolute;top:15%;left:0%;width:100%;height:85%;overflow-x:hidden;overflow-y:auto">
+    <div id="fill" class="squareholder">
     </div>
 
     <button id="cancelBtn" classs="ui-overlay" style="color:white;background-color:#FF0000;z-index:2;position:absolute;top:0%;left:80%;width:20%;aspect-ratio: 1 / 1;display:none;">X</button>
@@ -91,6 +106,8 @@
         const detectionCtx = detectionCanvas.getContext('2d');
         const cropCanvas = document.getElementById('cropCanvas');
         const ctx = cropCanvas.getContext('2d');
+
+        const fillMe = document.getElementById('fill');
 
         //const captureBtn = document.getElementById("captureBtn");
 
@@ -229,9 +246,13 @@
                                     beepHi();
                                     //Okay.
                                 break;
+                                case 400:
+                                    //Bad upc..
+                                    beepHiLow();
+                                break;
                                 case 404:
                                     //Missing product, upload then add.
-                                    beepLow();
+                                    beepLowLow();
                                     pushMode = 'image';
                                     addOneAfterCapture = true;
                                     startCapture();
@@ -416,10 +437,13 @@
                 }
                 if( promise ) promise.then( result => {
                     if( result.ok ) {
-                        beepHi();
+                        ServerApi.api_item_add(currentUPC).then( response => {
+                            if( !response.ok ) beepLow();
+                            else beepHi();
+                        } );
                         startScanner();
                     } else {
-                        beepLow();
+                        beepLowLow();
                         resetUI();
                         resetButtons();
                         alert("Failed to upload photo. Try again later.");
@@ -446,9 +470,23 @@
             audioContext.hiGain.gain.setValueAtTime( 0, audioContext.ac.currentTime + 0.05);
         }
 
+        function beepHiLow() {
+            audioContext.hiGain.gain.setValueAtTime( 1, audioContext.ac.currentTime);
+            audioContext.hiGain.gain.setValueAtTime( 0, audioContext.ac.currentTime + 0.05);
+            audioContext.loGain.gain.setValueAtTime( 1, audioContext.ac.currentTime + 0.10);
+            audioContext.loGain.gain.setValueAtTime( 0, audioContext.ac.currentTime + 0.15);
+        }
+
         function beepLow() {
             audioContext.loGain.gain.setValueAtTime( 1, audioContext.ac.currentTime);
             audioContext.loGain.gain.setValueAtTime( 0, audioContext.ac.currentTime + 0.05);
+        }
+
+        function beepLowLow() {
+            audioContext.loGain.gain.setValueAtTime( 1, audioContext.ac.currentTime);
+            audioContext.loGain.gain.setValueAtTime( 0, audioContext.ac.currentTime + 0.05);
+            audioContext.loGain.gain.setValueAtTime( 1, audioContext.ac.currentTime + 0.10);
+            audioContext.loGain.gain.setValueAtTime( 0, audioContext.ac.currentTime + 0.15);
         }
 
         function initAudio() {
@@ -477,10 +515,61 @@
         captureFrameBtn.addEventListener('click', captureFrame);
         cropBtn.addEventListener('click', cropAndSave);
         //captureBtn.addEventListener('click', testUploadInfo );
+        
+        async function grabState() {
+            ServerApi.api_state().then(response => { gotState(response) });
+        }
+
+        async function stuffImage( uri, div ) {
+            try {
+                var response = await fetch(uri);
+                await ServerApi.api_logbody("Fetch " + uri);
+                if( response.ok ) {
+                    var blob = await response.blob();
+                    div.style.backgroundImage = "url(" + URL.createObjectURL(blob)+ ")";
+                } else {
+                    await ServerApi.api_logbody("Not Ok " + uri);
+                    stuffImage( uri, div );
+                }
+            } catch (e) {
+                await ServerApi.api_logbody("Catch " + uri);
+                stuffImage( uri, div );
+            }
+        }
+
+        async function gotState( response ) {
+            if( response.ok ) {
+                var stateStuff = await response.json();
+                var currentSectionId = null;
+                var aSection;
+                var length = stateStuff.sections.length;
+                for( i = 0; i < length; i++ ) {
+                    if( stateStuff.sections[i].current ) {
+                        currentSectionId = stateStuff.sections[i].sectionId;
+                        break;
+                    }
+                }
+                if( currentSectionId == null ) {
+                    grabState();
+                } else {
+                    var sectionContents = stateStuff.section_contents[ currentSectionId ];
+                    sectionContents.forEach(anItem => {
+                        var newDiv = document.createElement("div");
+                        newDiv.className='squareitem';
+                        newDiv.id = "upc_" + anItem.upc;
+                        newDiv.image = stateStuff.itemdb[anItem.upc].image;
+                        fillMe.appendChild(newDiv);
+                        stuffImage( stateStuff.itemdb[anItem.upc].image, newDiv );
+                     } );
+                }
+            } else {
+                grabState();
+            }
+        }
 
         window.onload = function() {
             initAudio();
-            ServerApi.api_state().then(response => { var text = response.text(); logServer(text); });
+            ServerApi.api_state().then(response => { gotState(response) });
         };
 
     </script>

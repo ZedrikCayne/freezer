@@ -622,11 +622,14 @@ bool deleteImage( struct CS_ClientInfo *info ) {
 }
 bool getProduct( struct CS_ClientInfo *info ) {
     const struct CS_String *upc = upcFromClientInfo(info);
+    if( upc == NULL ) {
+        CS_serverReplyError(info, CS_RESPONSE_400, "Bad UPC code.");
+        return true;
+    }
     
     const char *selectedProduct = selectAProduct(upc);
     if( selectedProduct == NULL ) {
-        struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_404, CS_MIME_DO_NOT_SET, NULL, 0);
-        CS_serverDoReply(info, reply);
+        CS_serverReplyError(info, CS_RESPONSE_404, "Unknown product.");
         return true;
     }
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_JSON, selectedProduct, strlen(selectedProduct));
