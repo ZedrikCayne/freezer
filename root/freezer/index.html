@@ -37,6 +37,7 @@
              touch-action: none;
          }
         .controls {
+            display: block;
             margin-bottom: 20px;
             text-align: center;
         }
@@ -59,6 +60,16 @@
             font-size: 24px;
             cursor: pointer;
         }
+        .overlaycontainer {
+            display: block;
+            position: absolute;
+            top: 0%;
+            left: 0%;
+            width: 100%;
+            height: 85%;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
         .squareholder {
             display: grid;
             grid-template-columns: 50% 50%;
@@ -71,21 +82,61 @@
             overflow-y: auto;
         }
         .squareitem {
+            position: relative;
             width: 100%;
             padding: 5px;
             aspect-ratio: 1 / 1;
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center;
+            container-type: size;
+        }
+        .squareitemnum {
+            position: absolute;
+            left: 80%;
+            top: 0;
+            width: 20%;
+            aspect-ratio: 1 / 1;
+            text-align: center;
+            font-size: 3em;
+            line-height: 1;
+            background-color: black;
+            --webkit-text-stroke: 1px black;
+        }
+        .zoombuttons {
+            width: 100%;
+            display: flex;
+            flex-direction: horizontal;
+            aspect-ratio: 5 / 1;
+            overflow: hidden;
+            container-type: size;
+        }
+        .abutton {
+            text-align: center;
+            font-size: 80cqh;
+            line-height: 1;
+            width: 20%;
+            aspect-ration: 1 / 1;
         }
     </style>
 </head>
 <body>
-    <div class="controls" style="flex-direction:horizontal;position:absolute;top:0%;left:0%;width:100%;height:15%">
+    <div id="mainCtrl" class="controls" style="flex-direction:horizontal;position:absolute;top:0%;left:0%;width:100%;height:15%">
         <button id="scanBtn">Scan To Add</button>
         <!--button id="captureBtn" onClick="beepLowLow()">beep</button-->
     </div>
     <div id="fill" class="squareholder">
+    </div>
+    <div id="productOverlay" class="overlaycontainer" style="display:hidden;">
+        <div class='zoombuttons' >
+            <div class="abutton" onClick="addOne()" style="background-color:green">+</div>
+            <div class="abutton" onClick="subOne()" style="background-color:blue">-</div>
+            <div class="abutton" style="background-color:gray"></div>
+            <div class="abutton" style="background-color:gray"></div>
+            <div class="abutton" onClick="cancelButton()" style="background-color:red">x</div>
+        </div>
+        <div id="fillOverlay">
+        </div>
     </div>
 
     <button id="cancelBtn" classs="ui-overlay" style="color:white;background-color:#FF0000;z-index:2;position:absolute;top:0%;left:80%;width:20%;aspect-ratio: 1 / 1;display:none;">X</button>
@@ -97,6 +148,7 @@
 
     <script>
         const audioContext = {"ac":null,"osc":null};
+        const mainCtrl = document.getElementById('mainCtrl');
         const cancelBtn = document.getElementById('cancelBtn');
         const scanBtn = document.getElementById('scanBtn');
         const captureFrameBtn = document.getElementById('captureFrameBtn');
@@ -106,10 +158,10 @@
         const detectionCtx = detectionCanvas.getContext('2d');
         const cropCanvas = document.getElementById('cropCanvas');
         const ctx = cropCanvas.getContext('2d');
+        const productOverlay = document.getElementById('productOverlay');
+        const fillOverlay = document.getElementById('fillOverlay');
 
         const fillMe = document.getElementById('fill');
-
-        //const captureBtn = document.getElementById("captureBtn");
 
         const offscreenCanvas = document.createElement('canvas');
         const offscreenCtx = offscreenCanvas.getContext('2d');
@@ -130,14 +182,12 @@
         let currentSection = '';
 
         let wasScanning = false;
-
-        function genericReceiver( what, postedWith, toObject ) {
-            alert(what);
-        }
+        let overviewUpc = '';
 
         resetUI();
 
         function resetUI() {
+            overviewUpc = '';
             cancelBtn.style.display = 'none';
             barcodeDetectorOn = false;
             video.style.display = 'none';
@@ -145,9 +195,12 @@
             detectionCanvas.style.display = 'none';
             detectionCanvas.style.pointerEvents = 'none';
             captureFrameBtn.style.display = 'none';
+            productOverlay.style.display = 'none';
             cropBtn.style.display = 'none';
             offscreenCtx.clearRect(0, 0, offscreenCanvas.width, offscreenCanvas.heigh );
             detectionCtx.clearRect(0, 0, detectionCanvas.width, detectionCanvas.height);
+            fillMe.style.display = 'grid';
+            mainCtrl.style.display = 'block';
             detectedBarcodes = [];
         }
 
@@ -254,7 +307,7 @@
                                     //Missing product, upload then add.
                                     beepLowLow();
                                     pushMode = 'image';
-                                    addOneAfterCapture = true;
+                                    addOneAfterPicture = true;
                                     startCapture();
                                 break;
                                 default:
@@ -437,10 +490,13 @@
                 }
                 if( promise ) promise.then( result => {
                     if( result.ok ) {
-                        ServerApi.api_item_add(currentUPC).then( response => {
-                            if( !response.ok ) beepLow();
-                            else beepHi();
-                        } );
+                        if( addOneAfterPicture ) {
+                            ServerApi.api_item_add(currentUPC).then( response => {
+                                if( !response.ok ) beepLow();
+                                else beepHi();
+                            } );
+                            addOneAfterPicture = false;
+                        }
                         startScanner();
                     } else {
                         beepLowLow();
@@ -460,10 +516,6 @@
             resetButtons();
         }
 
-        async function apiTest() {
-            var response = await ServerApi.api_logbody("This");
-            alert( "Got response" );
-        }
 
         function beepHi() {
             audioContext.hiGain.gain.setValueAtTime( 1, audioContext.ac.currentTime);
@@ -528,13 +580,79 @@
                     var blob = await response.blob();
                     div.style.backgroundImage = "url(" + URL.createObjectURL(blob)+ ")";
                 } else {
-                    await ServerApi.api_logbody("Not Ok " + uri);
-                    stuffImage( uri, div );
+                    if( response.status != 404 ) {
+                        setTimeout( stuffImage, 200, uri, div );
+                    }
                 }
             } catch (e) {
-                await ServerApi.api_logbody("Catch " + uri);
-                stuffImage( uri, div );
+                setTimeout( stuffImage, 200, uri, div );
             }
+        }
+
+        async function changeNumber( upc, howmuch ) {
+            var div = document.getElementById( "details_num_" + upc );
+            if( div ) {
+                ver newNumber = Number(div.innerText) + howmuch;
+                if( newNumber >= 0 ) div.innerText = newNumber;
+            }
+            div = document.getElementById( "num_" + upc );
+            if( div ) {
+                ver newNumber = Number(div.innerText) + howmuch;
+                if( newNumber >= 0 ) div.innerText = newNumber;
+            }
+        }
+
+        async function addOne() {
+            var response = await ServerApi.api_item_add( overviewUpc );
+            if( response.ok ) {
+                beepHi();
+                changeNumber( overviewUpc, 1 );
+            } else {
+                beepLow();
+            }
+        }
+        async function subOne() {
+            var response = await ServerApi.api_item_remove( overviewUpc );
+            if( response.ok ) {
+                beepHi();
+                changeNumber( overviewUpc, -1 );
+            } else {
+                beepLow();
+            }
+        }
+
+        async function openDetails( aThing ) {
+            var target = aThing.currentTarget;
+            resetUI();
+            overviewUpc = target.upc;
+            fillMe.style.display = 'none';
+            mainCtrl.style.display = 'none';
+            productOverlay.style.display = 'block';
+            fillOverlay.innerHTML = '';
+            var newDiv = newSquare( target.image, target.num, "details_num_" + target.upc );
+            fillOverlay.appendChild(newDiv);
+            newDiv = newSquare( target.info );
+            fillOverlay.appendChild(newDiv);
+            newDiv = newSquare( target.nutrition );
+            fillOverlay.appendChild(newDiv);
+        }
+
+        function newSquare( imageUrl, num, idForNumber ) {
+            var newDiv = document.createElement("div");
+            newDiv.className='squareitem';
+            if( !(imageUrl === null || imageUrl === undefined) ) {
+                stuffImage( imageUrl, newDiv );
+            }
+            if( !(num === null || num === undefined ) ) {
+                var aNum = document.createElement("div");
+                aNum.className = 'squareitemnum';
+                aNum.innerText = num;
+                if( !(idForNumber === null || idForNumber === undefined) ) {
+                    aNum.id = idForNumber;
+                }
+                newDiv.appendChild(aNum);
+            }
+            return newDiv;
         }
 
         async function gotState( response ) {
@@ -554,12 +672,15 @@
                 } else {
                     var sectionContents = stateStuff.section_contents[ currentSectionId ];
                     sectionContents.forEach(anItem => {
-                        var newDiv = document.createElement("div");
-                        newDiv.className='squareitem';
+                        var newDiv = newSquare( stateStuff.itemdb[anItem.upc].image, anItem.num, "num_" + anItem.upc );
                         newDiv.id = "upc_" + anItem.upc;
+                        newDiv.upc = anItem.upc;
+                        newDiv.num = anItem.num;
                         newDiv.image = stateStuff.itemdb[anItem.upc].image;
+                        newDiv.info = stateStuff.itemdb[anItem.upc].info;
+                        newDiv.nutrition = stateStuff.itemdb[anItem.upc].nutrition;
+                        newDiv.onclick = openDetails;
                         fillMe.appendChild(newDiv);
-                        stuffImage( stateStuff.itemdb[anItem.upc].image, newDiv );
                      } );
                 }
             } else {
