@@ -109,7 +109,8 @@ static const struct CS_String *upcFromClientInfo( struct CS_ClientInfo *info ) {
     return upc;
 }
 
-static const char *freezerItemsByFreezerSQL = "SELECT DISTINCT i.upc,i.image,i.instructions,i.nutrition FROM items AS i INNER JOIN freezers AS f on i.upc = f.upc INNER JOIN freezer_sections AS s ON f.sectionId = s.sectionId WHERE s.freezerId = \"%s\";";
+static const char *freezerItemsSQL = "SELECT upc,image,instructions, nutrition FROM items;";
+//static const char *freezerItemsByFreezerSQL = "SELECT DISTINCT i.upc,i.image,i.instructions,i.nutrition FROM items AS i INNER JOIN freezers AS f on i.upc = f.upc INNER JOIN freezer_sections AS s ON f.sectionId = s.sectionId WHERE s.freezerId = \"%s\";";
 static const char *freezerSectionContentsSQL = "SELECT upc,num FROM freezers WHERE sectionId = \"%s\";";
 static const char *productImageName( const struct CS_String *upc, const char *imageType ) {
     return CS_tempBuffSnprintf(1024, "/freezer/products/upc_%s_%s.jpg", CS_stringTempCstring(upc), imageType );
@@ -827,7 +828,8 @@ bool getState( struct CS_ClientInfo *info ) {
         CS_sqlReturnResponse( sectionResponse );
     }
     CS_sqlReturnResponse(response);
-    sql = CS_stringTempSnprintf(2048, freezerItemsByFreezerSQL, CS_stringTempCstring(userState->freezerId));
+    //sql = CS_stringTempSnprintf(2048, freezerItemsByFreezerSQL, CS_stringTempCstring(userState->freezerId));
+    sql = CS_stringTempSnprintf(2048, "%s", freezerItemsSQL );
     response = CS_sqlQuery( freezerBackend, sql );
     if( response == NULL ) {
         goto DB_ERROR;
@@ -840,15 +842,15 @@ bool getState( struct CS_ClientInfo *info ) {
         if( itemRow->values[1].intValue )
             CS_jsonNodeAddUnquotedCstring(itemNode,"image",productImageName(upc,"image"));
         else
-            CS_jsonNodeAddNull(root,"image");
+            CS_jsonNodeAddNull(itemNode,"image");
         if( itemRow->values[2].intValue )
             CS_jsonNodeAddUnquotedCstring(itemNode,"info",productImageName(upc,"info"));
         else
-            CS_jsonNodeAddNull(root,"info");
+            CS_jsonNodeAddNull(itemNode,"info");
         if( itemRow->values[3].intValue )
             CS_jsonNodeAddUnquotedCstring(itemNode,"nutrition",productImageName(upc,"nutrition"));
         else
-            CS_jsonNodeAddNull(root,"nutrition");
+            CS_jsonNodeAddNull(itemNode,"nutrition");
         itemRow = itemRow->next;
     }
     CS_sqlReturnResponse(response);

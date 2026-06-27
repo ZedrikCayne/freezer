@@ -97,6 +97,7 @@
             width: 20%;
             aspect-ratio: 1 / 1;
             text-align: center;
+            container-type: size;
             font-size: 3em;
             line-height: 1;
             background-color: black;
@@ -293,7 +294,6 @@
                     if (clickedBarcode) {
                         currentUPC = clickedBarcode.rawValue;
                         ServerApi.api_item_add( currentUPC ).then( response => {
-                            logServer("Got " + response.status );
                             switch( response.status ) {
                                 case 200:
                                     beepHi();
@@ -498,8 +498,11 @@
                     if( result.ok ) {
                         if( addOneAfterPicture ) {
                             ServerApi.api_item_add(currentUPC).then( response => {
-                                if( !response.ok ) beepLow();
-                                else beepHi();
+                                if( !response.ok ) {
+                                    beepLow();
+                                } else {
+                                    beepHi();
+                                }
                             } );
                             addOneAfterPicture = false;
                         }
@@ -588,22 +591,31 @@
         }
 
         async function stuffImage( uri, div ) {
-            setTimeout( stuffImageReal, Math.floor(Math.random() * 1000), uri, div );
+            setTimeout( stuffImageReal, Math.floor(Math.random() * 200) + 25, uri, div );
         }
+
+        let currentStuffQueue = 0;
+
         async function stuffImageReal( uri, div ) {
             try {
-                var response = await fetch(uri + "?cb=" + cbust());
-                if( response.ok ) {
-                    var blob = await response.blob();
-                    console.log("stuff " + uri);
-                    div.style.backgroundImage = "url( " + URL.createObjectURL(blob)+ " )";
+                if( currentStuffQueue > 4 ) {
+                    stuffImage( uri, div );
                 } else {
-                    if( response.status != 404 ) {
-                        stuffImage( uri, div );
+                    ++currentStuffQueue;
+                    var response = await fetch(uri + "?cb=" + cbust());
+                    --currentStuffQueue;
+                    if( response.ok ) {
+                        var blob = await response.blob();
+                        div.style.backgroundImage = "url( " + URL.createObjectURL(blob)+ " )";
                     } else {
+                        if( response.status != 404 ) {
+                            stuffImage( uri, div );
+                        } else {
+                        }
                     }
                 }
             } catch (e) {
+                --currentStuffQueue;
                 stuffImage( uri, div );
             }
         }
@@ -618,6 +630,8 @@
             if( div ) {
                 var newNumber = Number(div.innerText) + howmuch;
                 if( newNumber >= 0 ) div.innerText = newNumber;
+            } else {
+
             }
         }
 
