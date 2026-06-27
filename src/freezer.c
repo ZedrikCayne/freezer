@@ -610,7 +610,8 @@ bool uploadImage( struct CS_ClientInfo *info ) {
             break;
     }
 
-    struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
+    const char *selectedProduct = selectAProduct(upc);
+    struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_JSON, selectedProduct, strlen(selectedProduct));
     CS_serverDoReply(info, reply);
     return true;
 }

@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, height=device-height">
     <title>What's in my Pantry?</title>
-    <script src="/freezer/api.js"></script>
     <style>
          body {
              background-color: #252525;
@@ -107,7 +106,7 @@
             width: 100%;
             display: flex;
             flex-direction: horizontal;
-            aspect-ratio: 5 / 1;
+            aspect-ratio: 6 / 1;
             overflow: hidden;
             container-type: size;
         }
@@ -131,8 +130,9 @@
         <div class='zoombuttons' >
             <div class="abutton" onClick="addOne()" style="background-color:green">+</div>
             <div class="abutton" onClick="subOne()" style="background-color:blue">-</div>
-            <div class="abutton" style="background-color:gray"></div>
-            <div class="abutton" style="background-color:gray"></div>
+            <div class="abutton" onClick="captureImage()" style="background-color:gray">C</div>
+            <div class="abutton" onClick="captureInfo()" style="background-color:darkgray">I</div>
+            <div class="abutton" onClick="captureNutrition()" style="background-color:gray">N</div>
             <div class="abutton" onClick="cancelButton()" style="background-color:red">x</div>
         </div>
         <div id="fillOverlay">
@@ -328,16 +328,22 @@
             }
         }
 
-        async function testUploadInfo() {
-            currentUPC = "1";
+        async function captureImage() {
+            currentUPC = overviewUpc;
+            pushMode = 'image';
             startCapture();
-            pushMode = 'info';
         }
 
-        async function testUploadNutrition() {
-            currentUPC = "1";
+        async function captureInfo() {
+            currentUPC = overviewUpc;
+            pushMode = 'info';
             startCapture();
+        }
+
+        async function captureNutrition() {
+            currentUPC = overviewUpc;
             pushMode = 'nutrition';
+            startCapture();
         }
 
         async function startCapture() {
@@ -572,32 +578,45 @@
             ServerApi.api_state().then(response => { gotState(response) });
         }
 
+        const busty = "0123456789AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz";
+        function cbust() {
+            var bustString = "";
+            for( var i = 0; i < 10; ++i ) {
+                bustString = bustString + busty[ Math.floor((Math.random() * 36)) ];
+            }
+            return bustString;
+        }
+
         async function stuffImage( uri, div ) {
+            setTimeout( stuffImageReal, Math.floor(Math.random() * 1000), uri, div );
+        }
+        async function stuffImageReal( uri, div ) {
             try {
-                var response = await fetch(uri);
-                await ServerApi.api_logbody("Fetch " + uri);
+                var response = await fetch(uri + "?cb=" + cbust());
                 if( response.ok ) {
                     var blob = await response.blob();
-                    div.style.backgroundImage = "url(" + URL.createObjectURL(blob)+ ")";
+                    console.log("stuff " + uri);
+                    div.style.backgroundImage = "url( " + URL.createObjectURL(blob)+ " )";
                 } else {
                     if( response.status != 404 ) {
-                        setTimeout( stuffImage, 200, uri, div );
+                        stuffImage( uri, div );
+                    } else {
                     }
                 }
             } catch (e) {
-                setTimeout( stuffImage, 200, uri, div );
+                stuffImage( uri, div );
             }
         }
 
         async function changeNumber( upc, howmuch ) {
             var div = document.getElementById( "details_num_" + upc );
             if( div ) {
-                ver newNumber = Number(div.innerText) + howmuch;
+                var newNumber = Number(div.innerText) + howmuch;
                 if( newNumber >= 0 ) div.innerText = newNumber;
             }
             div = document.getElementById( "num_" + upc );
             if( div ) {
-                ver newNumber = Number(div.innerText) + howmuch;
+                var newNumber = Number(div.innerText) + howmuch;
                 if( newNumber >= 0 ) div.innerText = newNumber;
             }
         }
@@ -688,9 +707,28 @@
             }
         }
 
+        async function loadApi() {
+            while( true ) {
+                try {
+                    var response = await fetch("/freezer/api.js");
+                    if( response.ok ) {
+                        var scriptDiv = document.createElement('script');
+                        scriptDiv.innerHTML = await response.text();
+                        document.head.appendChild(scriptDiv);
+                        ServerApi.api_state().then(response => { gotState(response) });
+                        return;
+                    } else {
+                        alert("Failed to load the api...reload the page please.");
+                    }
+                } catch (e) {
+                    setTimeout( loadApi, 100 );
+                }
+            }
+        }
+
         window.onload = function() {
             initAudio();
-            ServerApi.api_state().then(response => { gotState(response) });
+            loadApi();
         };
 
     </script>
