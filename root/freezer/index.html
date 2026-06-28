@@ -456,7 +456,7 @@
         let pushMode = 'image';
 
 
-        async function cropAndSave() {
+        async function uploadImage() {
             const scale = cropCanvas.width / offscreenCanvas.width;
             
             const realX = selection.x / scale;
@@ -574,7 +574,7 @@
         cancelBtn.addEventListener('click', cancelButton);
         scanBtn.addEventListener('click', startScanner);
         captureFrameBtn.addEventListener('click', captureFrame);
-        cropBtn.addEventListener('click', cropAndSave);
+        cropBtn.addEventListener('click', uploadImage );
         //captureBtn.addEventListener('click', testUploadInfo );
         
         async function grabState() {
