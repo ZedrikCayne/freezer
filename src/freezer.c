@@ -407,8 +407,8 @@ bool loginAndReturnIndex( struct CS_ClientInfo *info, const char *sessionCookie 
     struct CS_Reply *reply = CS_serverCreateReply( info, CS_RESPONSE_302, CS_MIME_HTML, NULL, 0 );
     CS_serverSetReplyCookie( reply, SESSION_COOKIE_NAME, CS_stringTempReferenceCstring(sessionCookie,-1), true, CS_REPLY_COOKIE_SAMESITE_LAX );
     CS_serverSetReplyHeader( reply, &CS_STRING("Location"), &CS_STRING("/freezer") );
-    CS_serverDoReply( info, reply );
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply( info, reply );
 }
 
 static const struct CS_String localhost = CS_STRING("localhost");
@@ -450,6 +450,7 @@ bool loginPageReturn( struct CS_ClientInfo *info ) {
 
     struct CS_StringBuilder *sb = CS_htmlToStringBuilder( root, 2048, false );
     struct CS_Reply *reply = CS_serverCreateReply( info, CS_RESPONSE_200, CS_MIME_HTML, CS_SB_buffer( sb ), CS_SB_size( sb ) );
+    reply->closeConnection = true;
     CS_serverDoReply( info, reply );
     CS_SB_free( sb );
     CS_htmlFree( root );
@@ -482,6 +483,7 @@ bool logBody( struct CS_ClientInfo *info ) {
     CS_LOG_LOUD("LOG BODY: %s",sb->buffer);
     CS_SB_free( sb );
     struct CS_Reply *reply = CS_serverCreateReply( info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0 );
+    reply->closeConnection = true;
     return CS_serverDoReply( info, reply );
 }
 
@@ -613,14 +615,14 @@ bool uploadImage( struct CS_ClientInfo *info ) {
 
     const char *selectedProduct = selectAProduct(upc);
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_JSON, selectedProduct, strlen(selectedProduct));
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 
 bool deleteImage( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool getProduct( struct CS_ClientInfo *info ) {
     const struct CS_String *upc = upcFromClientInfo(info);
@@ -635,48 +637,48 @@ bool getProduct( struct CS_ClientInfo *info ) {
         return true;
     }
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_JSON, selectedProduct, strlen(selectedProduct));
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool deleteProduct( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool getMessages( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool deleteMessage( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool acceptMessage( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool sendMessage( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool getFamily( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool inviteFamilyMember( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool removeFamilyMember( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool itemOperationOnFreezerDoesRepliesOnError( struct CS_ClientInfo *info, const struct CS_String *upc ) {
     if( upc == NULL ) {
@@ -702,8 +704,8 @@ bool addItem( struct CS_ClientInfo *info ) {
         return true;
     }
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool removeItem( struct CS_ClientInfo *info ) {
     struct UserState *userState = (struct UserState *)info->persistentData;
@@ -715,69 +717,68 @@ bool removeItem( struct CS_ClientInfo *info ) {
     }
     struct CS_Reply *reply;
     reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool addSection( struct CS_ClientInfo *info ) {
     //struct UserState *userState = (struct UserState *)info->persistentData;
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool removeSection( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool switchSection( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool switchFreezer( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool removeFreezer( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool addFreezer( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool allowAddEmail( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool allowRemoveEmail( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool allowBanEmail( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool listSection( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
     //struct UserState *userState = (struct UserState *)info->persistentData;
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool listFreezer( struct CS_ClientInfo *info ) {
     struct CS_Reply *reply = CS_serverCreateReply(info, CS_RESPONSE_200, CS_MIME_DO_NOT_SET, NULL, 0);
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 }
 bool serveFile( struct CS_ClientInfo *info ) {
-    CS_serverFileServer(info);
-    return true;
+    return CS_serverFileServer(info);
 }
 bool renameFreezer( struct CS_ClientInfo *info ) {
     struct UserState *userState = (struct UserState *)info->persistentData;
@@ -856,8 +857,8 @@ bool getState( struct CS_ClientInfo *info ) {
     CS_sqlReturnResponse(response);
     const char *jsonReply = CS_jsonNodePrintableTemp(base);
     struct CS_Reply *reply = CS_serverCreateReply( info, CS_RESPONSE_200, CS_MIME_JSON, jsonReply, strlen(jsonReply) );
-    CS_serverDoReply(info, reply);
-    return true;
+    reply->closeConnection = true;
+    return CS_serverDoReply(info, reply);
 
 DB_ERROR:
     CS_jsonFree(base);
@@ -867,5 +868,5 @@ DB_ERROR:
 }
 bool logfilter( struct CS_ClientInfo *info ) {
     CS_LOG_LOUD("REQUEST: %.*s", info->requestInfo.uri.length, info->requestInfo.uri.data);
-return false;
+    return false;
 }
