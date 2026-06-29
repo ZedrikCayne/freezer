@@ -6,16 +6,30 @@
     <title>What's in my Pantry?</title>
     <style>
          body {
-             background-color: #252525;
-             color: white;
-             font-family: sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
+              background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+              color: white;
+              font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+             display: flex;
+             flex-direction: column;
+             align-items: center;
+             justify-content: center;
+             min-height: 100vh;
+             margin: 0;
+             padding: 20px;
+          }
+         ::-webkit-scrollbar {
+             width: 8px;
+         }
+         ::-webkit-scrollbar-track {
+             background: rgba(0, 0, 0, 0.2);
+             border-radius: 4px;
+         }
+         ::-webkit-scrollbar-thumb {
+             background: rgba(108, 99, 255, 0.5);
+             border-radius: 4px;
+         }
+         ::-webkit-scrollbar-thumb:hover {
+             background: rgba(108, 99, 255, 0.7);
          }
          #video {
              position: absolute;
@@ -35,40 +49,62 @@
              object-fit: contain;
              touch-action: none;
          }
-        .controls {
-            display: block;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        .ui-overlay {
-            z-index: 1;
-        }
-        .controls button {
-            margin: 5px;
-        }
-        input {
-            padding: 10px;
-            font-size: 16px;
-            width: 250px;
-            margin-bottom: 10px;
-        }
-        button {
-            background-color: #909090;
-            color: white;
-            padding: 10px 20px;
-            font-size: 24px;
-            cursor: pointer;
-        }
+         .controls {
+             display: block;
+             margin-bottom: 20px;
+             text-align: center;
+         }
+         .ui-overlay {
+             z-index: 1;
+         }
+         .controls button {
+             margin: 5px;
+         }
+         input {
+             padding: 10px;
+             font-size: 16px;
+             width: 250px;
+             margin-bottom: 10px;
+         }
+         button {
+             background: linear-gradient(145deg, #6c63ff, #4834d4);
+             color: white;
+             padding: 12px 28px;
+             font-size: 18px;
+             font-weight: 600;
+             border: none;
+             border-radius: 10px;
+             cursor: pointer;
+             box-shadow: 0 4px 15px rgba(108, 99, 255, 0.4);
+             transition: all 0.2s ease;
+         }
+         button:hover {
+             background: linear-gradient(145deg, #7b73ff, #5a45e0);
+             box-shadow: 0 6px 20px rgba(108, 99, 255, 0.6);
+             transform: translateY(-1px);
+         }
+         button:active {
+             transform: translateY(1px);
+             box-shadow: 0 2px 8px rgba(108, 99, 255, 0.3);
+         }
+         button:disabled {
+             background: #444;
+             box-shadow: none;
+             cursor: not-allowed;
+             transform: none;
+         }
         .overlaycontainer {
-            display: block;
-            position: absolute;
-            top: 0%;
-            left: 0%;
-            width: 100%;
-            height: 85%;
-            overflow-x: hidden;
-            overflow-y: auto;
-        }
+             display: block;
+             position: absolute;
+             top: 0%;
+             left: 0%;
+             width: 100%;
+             height: 85%;
+             overflow-x: hidden;
+             overflow-y: auto;
+             background: rgba(22, 33, 62, 0.95);
+             backdrop-filter: blur(10px);
+         }
         .squareholder {
             display: grid;
             grid-template-columns: 50% 50%;
@@ -89,39 +125,69 @@
             background-repeat: no-repeat;
             background-position: center;
             container-type: size;
+            box-sizing: border-box;
         }
         .squareitemnum {
             position: absolute;
-            left: 80%;
-            top: 0;
-            width: 20%;
+            right: 4px;
+            top: 4px;
+            width: 30cqi;
             aspect-ratio: 1 / 1;
             text-align: center;
             container-type: size;
-            font-size: 3em;
+            font-size: 20cqi;
+            font-weight: 800;
             line-height: 1;
-            background-color: black;
-            --webkit-text-stroke: 1px black;
+            color: #fff;
+            background: rgba(108, 99, 255, 0.92);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
         }
         .zoombuttons {
-            width: 100%;
-            display: flex;
-            flex-direction: horizontal;
-            aspect-ratio: 6 / 1;
-            overflow: hidden;
-            container-type: size;
-        }
-        .abutton {
-            text-align: center;
-            font-size: 80cqh;
-            line-height: 1;
-            width: 20%;
-            aspect-ration: 1 / 1;
-        }
+             width: 100%;
+             display: flex;
+             flex-direction: row;
+             aspect-ratio: 6 / 1;
+             overflow: hidden;
+             container-type: size;
+             padding: 8px;
+             gap: 6px;
+             box-sizing: border-box;
+             background: rgba(0, 0, 0, 0.3);
+         }
+         .abutton {
+             text-align: center;
+             font-size: 7cqw;
+             line-height: 1;
+             width: 20%;
+             aspect-ratio: 1 / 1;
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             border-radius: 10px;
+             font-weight: 700;
+             color: white;
+             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+             transition: transform 0.15s ease, filter 0.15s ease;
+             cursor: pointer;
+             user-select: none;
+         }
+         .abutton:hover {
+             transform: scale(1.08);
+             filter: brightness(1.2);
+         }
+         .abutton:active {
+             transform: scale(0.95);
+         }
     </style>
 </head>
 <body>
-    <div id="mainCtrl" class="controls" style="flex-direction:horizontal;position:absolute;top:0%;left:0%;width:100%;height:15%">
+    <div id="mainCtrl" class="controls" style="flex-direction:horizontal;position:absolute;top:0%;left:0%;width:100%;height:15%;background:rgba(0,0,0,0.4);backdrop-filter:blur(8px);align-items:center;justify-content:center">
         <button id="scanBtn">Scan To Add</button>
         <!--button id="captureBtn" onClick="beepLowLow()">beep</button-->
     </div>
